@@ -1,0 +1,7 @@
+.vscode/**
+
+**/.DS-Store
+
+envir/**
+!envir/requirements.*
+
