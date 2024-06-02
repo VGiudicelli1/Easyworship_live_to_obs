@@ -14,10 +14,15 @@ I inspire myself from this github project [https://github.com/mikenor/ew2vm.git]
 # Compatibilities
 
 | Easyworship version | Compatible |
-|---------------------|------------|
+|:-------------------:|:----------:|
 | unknow | I hope because i use it |
 
 | OBS version | Compatible |
-|---------------------|------------|
+|:-------------------:|:----------:|
 | unknow | I hope because i use it |
 
+# Status
+
+|  date  | status |
+|:------:|:------:|
+|2024.06.02 | In development, not operational |
