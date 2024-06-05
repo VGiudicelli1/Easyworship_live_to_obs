@@ -1,0 +1,22 @@
+BACK
+
+Event_caller:
+    add_event_listener
+    remove_event_listener
+    call_event
+
+storage:
+    scenes
+    current_scene
+    get_current_scene
+    ...
+
+ew_api:
+    connect
+    disconnect
+    event_call_scene
+
+
+FRONT
+
+interface
