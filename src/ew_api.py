@@ -23,7 +23,12 @@ class API:
 
     logger: "logger.Logger"
 
-    def __init__(self: "API", description: str, host:str, port:int=5353, logger:'logger.Logger'=logger.LoggerPrint):
+    def __init__(
+            self: "API", 
+            description: str,
+            host:str, port:int=5353, 
+            logger:'logger.Logger' = logger.LoggerPrint()
+        ):
         self.description = description
         self.connected = False
         self.host = host
@@ -37,6 +42,10 @@ class API:
         self.logger = logger
 
         self.tx_queue = collections.deque()
+
+        self.socket = None
+        self.tx_thread = None
+        self.rx_thread = None
 
     def connect(self: "API") -> bool:
         # clean up any existing connection
@@ -121,7 +130,7 @@ class EW_API (API):
             self: "EW_API", 
             host: str = '168.192.1.213', 
             client_id: str = 'a164e834-fc66-4cff-8e47-aa904ee9e62b', 
-            logger: logger.Logger = logger.LoggerPrint, 
+            logger: logger.Logger = logger.LoggerPrint(), 
             credit_slide: "list[str]" = ['Title', 'Credit', 'Credits'],
             presentation_filter: "list[str]" = []):
         super().__init__("EW", host, logger=logger)

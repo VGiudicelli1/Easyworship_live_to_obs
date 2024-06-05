@@ -22,10 +22,22 @@ class LoggerPrint (Logger):
         print('SEND: \33[95m' + value + '\033[0m')
 
     def log(self: 'LoggerPrint', value: str):
-        print('Log: \33[91m' + value + '\033[0m')
+        print('Log: \33[93m' + value + '\033[0m')
 
     def error(self: 'LoggerPrint', value: str):
         print('Error: \33[91m' + value + '\033[0m')
 
     def event(self: 'LoggerPrint', value: str):
-        print('Event: \33[91m' + value + '\033[0m')
+        print('Event: \33[92m' + value + '\033[0m')
+
+if __name__ == '__main__':
+    l = LoggerPrint()
+
+    l.log("azeerty")
+    l.recv('fsfgd')
+    l.send('zgsdf')
+    l.error('sfdf')
+    l.event('regdfbd')
+
+    l2 = Logger()
+    l2.log('rsdv')

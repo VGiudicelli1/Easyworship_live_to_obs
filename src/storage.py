@@ -10,7 +10,7 @@ class Slide:
     title: str
     NULL: "Slide"
 
-    def __init__(self: "Slide", id: int, rowid: int, revision: int, infoRecived: bool, infoRequested: bool):
+    def __init__(self: "Slide", id: int, rowid: int, revision: int):
         self.id = id
         self.rowid = rowid
         self.revision = revision
@@ -38,7 +38,7 @@ class Slide:
     def __bool__(self: "Slide") -> bool:
         return self.isNull()
 
-Slide.NULL = Slide(-1, -1, -1, False, False, "", "")
+Slide.NULL = Slide(-1, -1, -1)
 
 class Storage:
     content_sent: None
@@ -103,7 +103,8 @@ class Storage:
 if __name__ == '__main__':
     store = Storage()
 
-    s = Slide(0, 1, 2, False, False, 'coucou', 'titre')
+    s = Slide(0, 1, 2)
+    s.reciveInfo('coucou', 'titre')
 
     print('add slide: ', store.setSlide(s))
 
