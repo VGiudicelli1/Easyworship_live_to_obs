@@ -90,7 +90,7 @@ class API:
             except OSError:
                 pass
             try:
-                self.socket.shutdown(self.socket.SHUT_RDWR)
+                self.socket.shutdown(socket.SHUT_RDWR)
             except OSError:
                 pass
             try:
@@ -128,7 +128,7 @@ class EW_API (API):
 
     def __init__(
             self: "EW_API", 
-            host: str = '168.192.1.213', 
+            host: str = '192.168.1.213', 
             client_id: str = 'a164e834-fc66-4cff-8e47-aa904ee9e62b', 
             logger: logger.Logger = logger.LoggerPrint(), 
             credit_slide: "list[str]" = ['Title', 'Credit', 'Credits'],
@@ -155,7 +155,7 @@ class EW_API (API):
             return True
         return False
     
-    def recv(self: "EW_API"):
+    def recv(self: "EW_API", ew_socket):
         received_data = b''
         extrabytes_len = 0
         newjson = {}
@@ -163,9 +163,9 @@ class EW_API (API):
 
         while self.connected:
             try:
-                self.socket.settimeout(None)
+                ew_socket.settimeout(None)
                 # receive data from socket
-                received_data += self.socket.recv(16384)
+                received_data += ew_socket.recv(16384)
             except OSError:
                 self.connected = False
             else:
@@ -198,7 +198,7 @@ class EW_API (API):
                             # don't have full message with all extra bytes, need to receive more data
                             newjson_len = -1
 
-    def send(self: "EW_API"):
+    def send(self: "EW_API", ew_socket):
         sentbytestimestamp = time.time()
         
         while self.connected:
@@ -221,9 +221,9 @@ class EW_API (API):
                     sentbytecount_total = 0
                     while sentbytecount_total < len(outboundbytes):
                         try:
-                            self.socket.settimeout(7)
-                            sentbytecount = self.socket.send(outboundbytes[sentbytecount_total:])
-                            self.socket.settimeout(None)
+                            ew_socket.settimeout(7)
+                            sentbytecount = ew_socket.send(outboundbytes[sentbytecount_total:])
+                            ew_socket.settimeout(None)
                         except OSError:
                             self.connected = False
                             outboundbytes = b''
@@ -277,9 +277,7 @@ class EW_API (API):
                     self.storage.setSlide(storage.Slide(
                         id=i,
                         rowid=rowid,
-                        revision=revision,
-                        infoRecived=False,
-                        infoRequested=False
+                        revision=revision
                     ))
                                                 
 
@@ -363,5 +361,15 @@ class EW_API (API):
 
 if __name__ == '__main__':
     ew = EW_API()
-    ew.connect()
+    try:
+        while True:
+            ew.connect()
+            time.sleep(3)
+    except KeyboardInterrupt:
+        print('\33[91mEW2VM TERMINATING...\033[0m')
+        
+    finally:
+        ew.disconnect()
+
+    print('\33[91mEW2VM FINISHED.\033[0m')
 
