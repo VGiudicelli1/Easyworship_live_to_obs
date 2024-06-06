@@ -6,3 +6,5 @@ envir/**
 !envir/requirements.*
 
 **/*.pyc
+
+ew_out.txt

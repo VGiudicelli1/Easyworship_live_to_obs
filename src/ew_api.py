@@ -347,6 +347,7 @@ class EW_API (API):
                         else:
                             if currentSlide.content: # we have the content of the new slide
                                 self.logger.event(str(currentSlide))
+                                self.logger.onCurrentSlideChange(currentSlide)
                                 self.storage.imagehash = self.storage.imagehash_pending
                                 
             if self.storage.imagehash_pending == self.storage.imagehash: # correct content is currently output
@@ -360,7 +361,7 @@ class EW_API (API):
             self.storage.contentvisible = False
 
 if __name__ == '__main__':
-    ew = EW_API()
+    ew = EW_API(logger=logger.LoggerSlideContentToTxt())
     try:
         while True:
             ew.connect()

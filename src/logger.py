@@ -1,3 +1,5 @@
+import storage
+
 class Logger:
     def recv(self: 'Logger', value: str) -> None:
         pass
@@ -12,6 +14,9 @@ class Logger:
         pass
 
     def event(self: 'Logger', value: str):
+        pass
+
+    def onCurrentSlideChange(self: 'Logger', slide: 'storage.Slide'):
         pass
 
 class LoggerPrint (Logger):
@@ -29,6 +34,17 @@ class LoggerPrint (Logger):
 
     def event(self: 'LoggerPrint', value: str):
         print('Event: \33[92m' + value + '\033[0m')
+
+class LoggerSlideContentToTxt (Logger):
+    path: str
+    def __init__(self: "LoggerSlideContentToTxt", path: str="./ew_out.txt"):
+        self.path = path
+
+    def onCurrentSlideChange(self: "LoggerSlideContentToTxt", slide: "storage.Slide"):
+        print(slide.content)
+        print('')
+        with open(self.path, 'w') as file:
+            file.write(slide.content)
 
 if __name__ == '__main__':
     l = LoggerPrint()
