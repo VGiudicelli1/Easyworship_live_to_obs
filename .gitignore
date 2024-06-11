@@ -4,6 +4,7 @@
 
 envir/**
 !envir/requirements.*
+!envir/readme.md
 
 **/*.pyc
 **/ew_out.txt
