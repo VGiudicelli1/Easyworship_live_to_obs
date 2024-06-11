@@ -22,11 +22,11 @@ class API:
     port: int
 
     logger: "logger.Logger"
-
     def __init__(
             self: "API", 
             description: str,
-            host:str, port:int=5353, 
+            host:str, 
+            port:int=5353, 
             logger:'logger.Logger' = logger.LoggerPrint()
         ):
         self.description = description
@@ -118,8 +118,32 @@ class API:
     def recv(self: "API"):
         pass
 
+class EventsManager:
+    _callbacks: "dict[str,list[function]]"
 
-class EW_API (API):
+    def __init__(self: "EventsManager"):
+        self._callbacks = {}
+
+    def fireEvent(self: "EventsManager", name: str, value: any) -> None:
+        for fn in self._callbacks[name]:
+            fn(value)
+
+    def addEventListener(self: "EventsManager", name: str, callback: "function") -> None:
+        self._callbacks[name].append(callback)
+
+    def removeAllEvents(self: "EventsManager") -> None:
+        for name in self.list_events():
+            self._callbacks[name] = []
+
+    def defineEvent(self: "EventsManager", name: str) -> None:
+        if name in self._callbacks:
+            raise 'existing event'
+        self._callbacks[name] = []
+
+    def list_events(self: "EventsManager") -> "list[str]":
+        return list(self._callbacks)
+
+class EW_API (API, EventsManager):
     client_id: str
     storage: "storage.Storage"
     credit_slide_re: "re.Pattern"
@@ -128,14 +152,24 @@ class EW_API (API):
 
     def __init__(
             self: "EW_API", 
-            host: str = '192.168.1.213', 
+            host: str = '192.168.1.213',
+            port: int = 5353, 
             client_id: str = 'a164e834-fc66-4cff-8e47-aa904ee9e62b', 
             logger: logger.Logger = logger.LoggerPrint(), 
             credit_slide: "list[str]" = ['Title', 'Credit', 'Credits'],
             presentation_filter: "list[str]" = []):
-        super().__init__("EW", host, logger=logger)
+        super().__init__("EW", host=host, port=port, logger=logger)
+        EventsManager.__init__(self)
+        self.defineEvent("connected")
+        self.defineEvent("error")
+        self.defineEvent("disconnected")
+        self.defineEvent("current_slide_changed")
+        self.defineEvent("content_visible")
+        self.defineEvent("content_unvisible")
+
         self.client_id = client_id
         self.storage = storage.Storage()
+        self.events = EventsManager()
 
         if credit_slide:
             self.credit_slide_re = re.compile('(?:\A|\s)(' + '|'.join(credit_slide) + ')(?:\s|\Z)', re.IGNORECASE)
@@ -148,11 +182,13 @@ class EW_API (API):
             self.presentation_filter_re = None
         self.presentation_filter = presentation_filter
 
-    def connect(self: "EW_API"):
+    def connect(self: "EW_API") -> bool:
         if super().connect():
             # hello to ew
             self.tx_queue.append(('{"device_type":0,"action":"connect","uid":"' + self.client_id + '","device_name":"ew to obs"}\r\n').encode('utf-8'))
+            self.fireEvent('connected', None)
             return True
+        self.fireEvent('error', 'fail to connect')
         return False
     
     def recv(self: "EW_API", ew_socket):
@@ -235,6 +271,7 @@ class EW_API (API):
                                 sentbytestimestamp = time.time()
                                 self.logger.send(outboundbytes[sentbytecount_total:sentbytecount_total + sentbytecount].decode('utf-8').encode('unicode_escape').decode('utf-8'))
                                 sentbytecount_total += sentbytecount
+        self.fireEvent('disconnected')
 
 
     def procmsg(self: "EW_API", jsondata: dict, rawdata: bytes):
@@ -348,16 +385,19 @@ class EW_API (API):
                             if currentSlide.content: # we have the content of the new slide
                                 self.logger.event(str(currentSlide))
                                 self.logger.onCurrentSlideChange(currentSlide)
+                                self.fireEvent("current_slide_changed", currentSlide)
                                 self.storage.imagehash = self.storage.imagehash_pending
                                 
             if self.storage.imagehash_pending == self.storage.imagehash: # correct content is currently output
                 if not self.storage.contentvisible: # content should be visible but is currently hidden
                     self.logger.event('set content visible')
+                    self.fireEvent('content_visible', self.storage.getCurrentSlide())
                     self.storage.contentvisible = True
                     
         if (not self.storage.contentvisible_pending) and self.storage.contentvisible: # content should be hidden but is currently visible
             # send hide commands to vm
             self.logger.event('set content unvisible')
+            self.fireEvent('content_unvisible', None)
             self.storage.contentvisible = False
 
 if __name__ == '__main__':
