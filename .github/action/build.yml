@@ -1,0 +1,17 @@
+name: Run Script
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.8'
+      - run: pip install -r envir/requirements.txt
+      - run: pyinstaller -F src/main.py --clean
+      - run: ls build
