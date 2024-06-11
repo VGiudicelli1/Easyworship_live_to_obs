@@ -12,3 +12,4 @@ datetime==5.5
 #json
 #struct
 #re
+pillow==10.3.0

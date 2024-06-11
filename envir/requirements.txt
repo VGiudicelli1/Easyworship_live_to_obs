@@ -18,6 +18,8 @@ macholib==1.16.3
     # via pyinstaller
 packaging==24.1
     # via pyinstaller-hooks-contrib
+pillow==10.3.0
+    # via -r requirements.in
 pyinstaller==5.0.1
     # via -r requirements.in
 pyinstaller-hooks-contrib==2024.7

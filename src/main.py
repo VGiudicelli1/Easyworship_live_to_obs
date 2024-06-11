@@ -27,6 +27,7 @@ with open("meta", "w") as meta:
 version : {VERSION}
 distrib_date : 2024-06-08
 contact me at vincent.giudicelli@free.fr
+source code (open-source) : https://github.com/VGiudicelli1/Easyworship_live_to_obs.git
 """)
 
 ## app
@@ -42,7 +43,7 @@ if __name__ == "__main__":
     fen.bind_all("<Triple-Shift-Escape>",
                  lambda event:(_write_error_("emergency destroy\n"),
                                fen.destroy()))
-    fen.geometry("900x600")
+    #fen.geometry("900x600")
 
     try:
         app = interface.App(fen)

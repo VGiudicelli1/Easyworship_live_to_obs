@@ -13,8 +13,14 @@ Download dependencies in envir
 
 ## build app
 
-Create app
+Create executable
 `pyinstaller -F --paths envir/lib/python3.8/site-packages src/main.py --clean`
+
+Create app (macos)
+`mkdir dist/ew_to_txt.app; cp dist/main dist/ew_to_txt.app/ew_to_txt`
+
+OR directly create app (macos):
+`pyinstaller -w --paths envir/lib/python3.8/site-packages --icon ew_to_obs.png src/main.py --clean -y -n ew_to_txt`
 
 ## DEV
 
