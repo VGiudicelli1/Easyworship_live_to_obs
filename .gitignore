@@ -1,10 +1,15 @@
 .vscode/**
 
-**/.DS-Store
+**/.DS_Store
 
 envir/**
 !envir/requirements.*
 
 **/*.pyc
-
-ew_out.txt
+**/ew_out.txt
+**/__pycache__
+**/build
+**/dist
+**/err.txt
+**/meta
+**/*.spec

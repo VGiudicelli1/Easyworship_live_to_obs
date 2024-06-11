@@ -4,5 +4,30 @@
 #
 #    pip-compile
 #
+altgraph==0.17.4
+    # via
+    #   macholib
+    #   pyinstaller
+datetime==5.5
+    # via -r requirements.in
 dnspython==2.6.1
     # via -r requirements.in
+importlib-metadata==7.1.0
+    # via pyinstaller-hooks-contrib
+macholib==1.16.3
+    # via pyinstaller
+packaging==24.1
+    # via pyinstaller-hooks-contrib
+pyinstaller==5.0.1
+    # via -r requirements.in
+pyinstaller-hooks-contrib==2024.7
+    # via pyinstaller
+pytz==2024.1
+    # via datetime
+zipp==3.19.2
+    # via importlib-metadata
+zope-interface==6.4.post2
+    # via datetime
+
+# The following packages are considered to be unsafe in a requirements file:
+# setuptools
