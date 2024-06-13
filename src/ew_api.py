@@ -271,7 +271,7 @@ class EW_API (API, EventsManager):
                                 sentbytestimestamp = time.time()
                                 self.logger.send(outboundbytes[sentbytecount_total:sentbytecount_total + sentbytecount].decode('utf-8').encode('unicode_escape').decode('utf-8'))
                                 sentbytecount_total += sentbytecount
-        self.fireEvent('disconnected')
+        self.fireEvent('disconnected', None)
 
 
     def procmsg(self: "EW_API", jsondata: dict, rawdata: bytes):

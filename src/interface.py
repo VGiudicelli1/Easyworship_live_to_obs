@@ -15,10 +15,10 @@ class Params:
     out_path: tk.StringVar
 
     def __init__(self:"Params", master:"tk.Widget|None"=None):
-        self.host = tk.StringVar(master=master, value='192.168.0.213')
+        self.host = tk.StringVar(master=master, value='192.168.1.213')
         self.port = tk.IntVar(master=master, value=5353)
         self.client_id = tk.StringVar(master=master, value='a164e834-fc66-4cff-8e47-aa904ee9e62b')
-        self.out_path = tk.StringVar(master=master, value='')
+        self.out_path = tk.StringVar(master=master, value='../out.txt')
 
     def load(self:"Params"):
         pass
@@ -105,6 +105,8 @@ class App(tk.Frame):
         lbl_chargement.destroy()
 
     def quit(self:"App", event = None):
+        if self.ew != None:
+            self.ew.disconnect()
         super().quit()
         self.master.destroy()
 
@@ -151,7 +153,7 @@ class App(tk.Frame):
             self.ew.disconnect()
 
     def on_current_slide_change(self, slide: "Slide|None"):
-        text:str = str(slide) if slide else ''
+        text:str = str(slide.content) if slide else ''
         self.datas.current_text.set(text)
         try:
             with open(self.params.out_path.get(), 'w') as f:
