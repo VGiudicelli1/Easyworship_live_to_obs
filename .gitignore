@@ -14,3 +14,5 @@ envir/**
 **/err.txt
 **/meta
 **/*.spec
+
+**/out.txt
