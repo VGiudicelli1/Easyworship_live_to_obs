@@ -16,3 +16,5 @@ envir/**
 **/*.spec
 
 **/out.txt
+
+**/.$*.bkp
