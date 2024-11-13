@@ -8,21 +8,15 @@ from flow import Flow
 
 
 class Output_Web(Output):
-    """
-    Param:
-        port
-    """
-
-    path: str
-    options: dict[str : str | bool]
+    _path: str
     _sio: socketio.Server
     _app: socketio.WSGIApp
     _message: None | str
     _server_running: bool
 
-    def __init__(self, name: str):
+    def __init__(self, name: str = "Output_Web"):
         super().__init__(name)
-        self.new_input("data", self.execute)
+        self.new_input("data", self._execute)
         self.add_param("port", "8000", lambda key, val: ())
 
         self._sio = socketio.Server(
@@ -36,7 +30,7 @@ class Output_Web(Output):
             },
         )
 
-        self._outputs["uri"] = Flow()
+        self.new_output("uri")
 
         @self._sio.event
         def connect(sid: str, envir):
@@ -45,7 +39,7 @@ class Output_Web(Output):
         self._message = None
         self._server_running = False
 
-    def execute(self, val=None):
+    def _execute(self, val=None):
         if not self.is_started():
             return
         self._message = self.read_input("data")
@@ -88,7 +82,7 @@ class Output_Web(Output):
             self.set_status(STATUS_STOP)
 
         ThreadPoolExecutor(1).submit(run_server)
-        self.execute()
+        self._execute()
 
     def stop(self):
         self._server_running = False

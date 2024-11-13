@@ -1,5 +1,6 @@
 from flow import Flow
 import abc
+from collections.abc import Callable
 
 # constants
 STATUS_STOP = 0
@@ -14,12 +15,24 @@ class Widget(metaclass=abc.ABCMeta):
     _UID: int
     _on: bool
     _name: str
-    _cb_change: dict[int, "function"]
+    _cb_change: dict[int, Callable[[], None]]
     _inputs: dict[str, tuple[Flow, int]]
     _outputs: dict[str, Flow]
     _status: int
-    _options: dict[str, tuple[bool, "function"]]
-    _params: dict[str, tuple[str, "function"]]
+    _options: dict[
+        str,
+        tuple[
+            bool,
+            Callable[[str, bool], None],
+        ],
+    ]
+    _params: dict[
+        str,
+        tuple[
+            str,
+            Callable[[str, str], None],
+        ],
+    ]
     NULL: "NullWidget"
 
     def __init__(self, name: str):
@@ -29,17 +42,19 @@ class Widget(metaclass=abc.ABCMeta):
         self._name = name
         self._on = False
         self._cb_change = {}
-        self._outputs = {
-            # "logs": Flow(),
-            # "errors": Flow(),
-        }
+        self._outputs = {}
         self._inputs = {}
         self._options = {}
         self._params = {}
 
         self._status = STATUS_STOP
 
-    def add_option(self, key: str, default: bool, callback: "function"):
+    def add_option(
+        self,
+        key: str,
+        default: bool,
+        callback: Callable[[str, bool], None],
+    ):
         if key in self._options:
             raise ValueError
         self._options[key] = (default, callback)
@@ -56,7 +71,12 @@ class Widget(metaclass=abc.ABCMeta):
     def read_option(self, key: str) -> bool:
         return self._options[key][0]
 
-    def add_param(self, key: str, default: str, callback: "function"):
+    def add_param(
+        self,
+        key: str,
+        default: str,
+        callback: Callable[[str, str], None],
+    ):
         if key in self._params:
             raise ValueError
         self._params[key] = (default + "", callback)
@@ -73,7 +93,12 @@ class Widget(metaclass=abc.ABCMeta):
     def read_param(self, key: str) -> str:
         return self._params[key][0]
 
-    def new_input(self, key: str, callback: "function", flow: Flow = None):
+    def new_input(
+        self,
+        key: str,
+        callback: Callable[[str], None],
+        flow: Flow = None,
+    ):
         if flow is None:
             flow = Flow()
         self._inputs[key] = [flow, flow.link(callback)]
@@ -85,6 +110,9 @@ class Widget(metaclass=abc.ABCMeta):
             flow,
             flow.link(self._inputs[key][0].unlink(self._inputs[key][1])),
         ]
+
+    def new_output(self, key: str, flow: Flow | None = None):
+        self._outputs[key] = flow if flow is not None else Flow()
 
     def get_output(self, key: str) -> Flow:
         return self._outputs[key]
@@ -110,14 +138,6 @@ class Widget(metaclass=abc.ABCMeta):
     def get_name(self) -> str:
         return self._name
 
-    def log(self, data: str):
-        # self._outputs["logs"].set(self._outputs["logs"].get() + "\n" + data)
-        pass
-
-    def error(self, data: str):
-        # self._outputs["errors"].set(self._outputs["errors"].get() + "\n" + data)
-        pass
-
     def set_on(self, on: bool):
         if self._on == on:
             return
@@ -129,6 +149,9 @@ class Widget(metaclass=abc.ABCMeta):
             self.stop()
         self.update()
 
+    def get_on(self) -> bool:
+        return self._on
+
     @abc.abstractmethod
     def start(self):
         raise NotImplemented
@@ -137,20 +160,14 @@ class Widget(metaclass=abc.ABCMeta):
     def stop(self):
         raise NotImplemented
 
-    def get_on(self) -> bool:
-        return self._on
-
-    def on_change(self, cb: "function") -> int:
-        return self.link_callback(cb)
-
-    def link_callback(self, cb: "function") -> int:
+    def link_callback(self, cb: Callable[[], None]) -> int:
         id = hash(cb)
         while id in self._cb_change:
             id += 1
         self._cb_change[id] = cb
         return id
 
-    def unlink_callback(self, id: int) -> "function":
+    def unlink_callback(self, id: int) -> Callable[[], None]:
         cb = self._cb_change[id]
         del self._cb_change[id]
         return cb
@@ -165,7 +182,7 @@ class Widget(metaclass=abc.ABCMeta):
 
 class NullWidget(Widget):
     def __init__(self):
-        super().__init__("")
+        super().__init__("NullWidget")
 
     def set_name(self, name):
         pass
@@ -182,9 +199,6 @@ class NullWidget(Widget):
     def set_status(self, status):
         pass
 
-    def on_change(self, cb) -> int:
-        return 0
-
     def link_callback(self, cb) -> int:
         return 0
 
@@ -192,6 +206,9 @@ class NullWidget(Widget):
         pass
 
     def new_input(self, key, callback, flow=None):
+        pass
+
+    def new_output(self, key, flow=None):
         pass
 
     def add_option(self, key, default, callback):

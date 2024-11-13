@@ -15,19 +15,19 @@ from widget_test import Widget_Test, Widget_Test2
 Todo:
 OK -- button stop all
 OK -- on quit: check all are stop or reject
-busy: reject all actions
-state error --> can stop or start
 
+Display selected widget:
+OK -- name
+OK -- options
+OK -- button Start/Stop
+   -- link inputs / full text
 
-Display selected widget
--> name
--> options
--> button Start/Stop
--> link inputs / full text
+Save & recall:
+   -- store all config in a file
+   -- recall config from a file
 
-Save & recall
-
-EW input
+EW input:
+   -- create EW input
 """
 
 
@@ -96,7 +96,6 @@ class App:
         self._i_widgets.append(i_out)
 
         out2 = Output_Web("WEB")
-        out2._fen = self._fen
         out2.link_input("data", inp.get_output("data"))
         i_out2 = i_Widget(out2, self._can_process)
         i_out2._x += 150

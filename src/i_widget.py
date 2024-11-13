@@ -30,16 +30,16 @@ class i_Widget:
         self._w = 100
         self._h = 120
 
-        self.draw()
-        self._widget.on_change(self.update)
+        self._draw()
+        self._widget.link_callback(self.update)
 
-    def is_in(self, x, y) -> bool:
+    def is_in(self, x: float, y: float) -> bool:
         return self._x <= x <= self._x + self._w and self._y <= y <= self._y + self._h
 
-    def scan_mark(self, x, y):
+    def scan_mark(self, x: float, y: float):
         self._scan_mark = (x, y)
 
-    def scan_dragto(self, x, y, gain=10.0):
+    def scan_dragto(self, x: float, y: float, gain: float = 10.0):
         dx = (x - self._scan_mark[0]) * gain
         dy = (y - self._scan_mark[1]) * gain
         self._x += dx
@@ -47,7 +47,7 @@ class i_Widget:
         self._scan_mark = (x, y)
         self._canvas.move(self._tag_UID, dx, dy)
 
-    def draw(self):
+    def _draw(self):
         self._tkid_rect = self._canvas.create_rectangle(
             0, 0, 0, 0, width=1, tags=["widget", self._tag_UID]
         )
@@ -159,3 +159,9 @@ class i_Widget:
             while len(tkids) > len(liste):
                 for id in tkids.pop():
                     self._canvas.delete(id)
+
+
+if __name__ == "__main__":
+    from app import run_as_main_file
+
+    run_as_main_file()

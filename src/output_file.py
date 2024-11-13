@@ -11,54 +11,54 @@ class Output_File(Output):
         rename_on_pathChange: rename file on path change (True) or create an new file (default True)
     """
 
-    path: str
+    _path: str
 
-    def __init__(self, name: str):
+    def __init__(self, name: str = "Output_File"):
         super().__init__(name)
-        self.new_input("data", self.execute)
+        self.new_input("data", self._execute)
 
-        self.path = ""
+        self._path = ""
 
         self.add_option("empty_on_stop", True, lambda key, val: ())
         self.add_option("delete_on_stop", False, lambda key, val: ())
         self.add_option("rename_on_pathChange", True, lambda key, val: ())
-        self.add_param("path", "", lambda key, val: self.set_path(val))
+        self.add_param("path", "", lambda key, val: self._set_path(val))
 
-    def write(self, value: str):
-        with open(self.path, "w") as file:
+    def _write(self, value: str):
+        with open(self._path, "w") as file:
             file.write(value)
 
-    def set_path(self, new_path: str):
+    def _set_path(self, new_path: str):
         if self.read_option("rename_on_pathChange"):
             try:
-                os.rename(self.path, new_path)
+                os.rename(self._path, new_path)
             except:
                 pass
         else:
             try:
                 with open(new_path, "w") as f_w:
-                    with open(self.path, "r") as f_r:
+                    with open(self._path, "r") as f_r:
                         f_w.write(f_r.read())
             except:
                 pass
-        self.path = new_path
+        self._path = new_path
 
-    def execute(self, _val=None):
+    def _execute(self, _val=None):
         if not self.is_started():
             return
-        self.write(self._inputs["data"][0].get())
+        self._write(self._inputs["data"][0].get())
 
     def start(self):
         self.set_status(STATUS_RUN)
 
-        self.execute()
+        self._execute()
 
     def stop(self):
         if self.read_option("empty_on_stop"):
-            self.write("")
+            self._write("")
         if self.read_option("delete_on_stop"):
             try:
-                os.remove(self.path)
+                os.remove(self._path)
             except:
                 pass
 

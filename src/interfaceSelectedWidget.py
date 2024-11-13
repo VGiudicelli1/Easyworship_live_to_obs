@@ -18,7 +18,8 @@ class Option(tk.Frame):
         self._lbl_name = tk.Label(self)
         self._lbl_name.place(relx=0.2, rely=0, relheight=1, relwidth=0.8)
         self._lbl_name.bind(
-            "<Button>", lambda event: self._value.set(not self._value.get())
+            "<Button>",
+            lambda event: self._value.set(not self._value.get()),
         )
 
     def set_name(self, name: str):
@@ -102,11 +103,17 @@ class InterfaceSelectedWidget:
     _widget: Widget
     _widget_callback_id: int
 
+    _label_type: tk.Label
+    _label_name: tk.Label
+    _button_start: tk.Button
+    _button_save: tk.Button
+
     _options: dict[str, Option]
     _param: dict[str, Param]
     _flows: dict[str, FlowOut]
+    _place_info: dict[str, any]
 
-    _label_type: tk.Label
+    _name: tk.StringVar
 
     def __init__(self, master: tk.Widget):
         self._frame = tk.Frame(master)
@@ -119,20 +126,20 @@ class InterfaceSelectedWidget:
         self._frame_content = tk.Frame(self._frame)
         self._frame_content.place(relx=0, rely=0.12, relwidth=1, relheight=0.88)
 
-        self.name = tk.StringVar(self._frame)
-        self.name.trace_add(
-            "write", lambda a, b, c: self._widget.set_name(self.name.get())
+        self._name = tk.StringVar(self._frame)
+        self._name.trace_add(
+            "write", lambda a, b, c: self._widget.set_name(self._name.get())
         )
 
         self._label_type = tk.Label(frame_head)
         self._label_type.place(relx=0, rely=0, relwidth=1, relheight=0.5)
-        self._label_name = tk.Entry(frame_head, textvariable=self.name)
+        self._label_name = tk.Entry(frame_head, textvariable=self._name)
         self._label_name.place(relx=0, rely=0.5, relheight=0.5, relwidth=0.6)
         self._button_start = tk.Button(frame_head, text="start", command=self.start)
         self._button_start.place(relx=0.6, rely=0.5, relwidth=0.4, relheight=0.5)
 
         self._button_save = tk.Button(
-            self._frame_content, text="Save", command=self.save
+            self._frame_content, text="Save", command=self._save_options_params
         )
         self._button_save.place(relx=0, rely=0, height=dY, relwidth=1)
 
@@ -148,14 +155,14 @@ class InterfaceSelectedWidget:
         self._frame.place(**{**self._place_info, **kwargs})
         self._place_info = self._frame.place_info()
 
-    def save(self):
+    def _save_options_params(self):
         for key in self._widget._options:
             self._widget.set_option(key, self._options[key].get_value())
         for key in self._widget._params:
             self._widget.set_param(key, self._param[key].get_value())
 
     def set_selectedWidget(self, widget: Widget):
-        def make_full_key(widget: Widget, key: str) -> str:
+        def make_full_key(key: str) -> str:
             return f"{widget._UID}-{key}"
 
         try:
@@ -169,7 +176,7 @@ class InterfaceSelectedWidget:
         else:
             self.place()
 
-        self.name.set(widget.get_name())
+        self._name.set(widget.get_name())
         self._button_start.config(text="stop" if widget.get_on() else "start")
         self._label_type.config(text=str(widget.__class__.__name__))
 
@@ -182,7 +189,7 @@ class InterfaceSelectedWidget:
             if not key in widget._params:
                 param.place_forget()
         for key, flow in self._flows.items():
-            if not make_full_key(widget, key) in widget._outputs:
+            if not make_full_key(key) in widget._outputs:
                 flow.place_forget()
 
         self._frame.update()
@@ -210,7 +217,7 @@ class InterfaceSelectedWidget:
         y += dY
 
         for key, flow in widget._outputs.items():
-            full_key = make_full_key(widget, key)
+            full_key = make_full_key(key)
             if not full_key in self._flows:
                 self._flows[full_key] = FlowOut(self._frame_content, key, flow)
 

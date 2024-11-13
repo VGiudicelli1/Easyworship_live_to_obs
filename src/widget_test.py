@@ -5,22 +5,22 @@ class Widget_Test(Widget):
     def __init__(self):
         super().__init__("Widget Test")
 
-        self.add_param("param_1", "default_value_1", self.on_param_change)
-        self.add_param("param_2", "default_value_2", self.on_param_change)
-        self.add_option("option_1", True, self.on_option_change)
-        self.add_option("option_2", False, self.on_option_change)
+        self.add_param("param_1", "default_value_1", self._on_param_change)
+        self.add_param("param_2", "default_value_2", self._on_param_change)
+        self.add_option("option_1", True, self._on_option_change)
+        self.add_option("option_2", False, self._on_option_change)
 
         self.update()
 
-    def on_param_change(self, key, value):
+    def _on_param_change(self, key, value):
         print(key, value)
-        self.display_all()
+        self._display_all()
 
-    def on_option_change(self, key, value):
+    def _on_option_change(self, key, value):
         print(key, value)
-        self.display_all()
+        self._display_all()
 
-    def display_all(self):
+    def _display_all(self):
         print(
             f"""
 State:
@@ -42,21 +42,21 @@ class Widget_Test2(Widget):
     def __init__(self):
         super().__init__("Widget Test2")
 
-        self.add_param("param_1", "default_value_1", self.on_param_change)
-        self.add_option("option_1", True, self.on_option_change)
-        self.add_option("option_2534", False, self.on_option_change)
+        self.add_param("param_1", "default_value_1", self._on_param_change)
+        self.add_option("option_1", True, self._on_option_change)
+        self.add_option("option_2534", False, self._on_option_change)
 
         self.update()
 
-    def on_param_change(self, key, value):
+    def _on_param_change(self, key, value):
         print(key, value)
-        self.display_all()
+        self._display_all()
 
-    def on_option_change(self, key, value):
+    def _on_option_change(self, key, value):
         print(key, value)
-        self.display_all()
+        self._display_all()
 
-    def display_all(self):
+    def _display_all(self):
         print(
             f"""
 State:
@@ -71,3 +71,9 @@ State:
 
     def stop(self):
         self.set_status(STATUS_STOP)
+
+
+if __name__ == "__main__":
+    from app import run_as_main_file
+
+    run_as_main_file()

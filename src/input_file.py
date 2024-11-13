@@ -1,105 +1,103 @@
 from input import Input
-
-# path: input | param
-
-# output: file content
-
-# status: stop | busy | run
-
-
 from watchdog.events import FileSystemEventHandler
 from flow import Flow
 import os
 from watchdog.observers import Observer
 from watchdog.observers.api import BaseObserver
-
-# import abc
-
-from widget import STATUS_BUSY, STATUS_RUN, STATUS_STOP
+from widget import STATUS_RUN, STATUS_STOP
 
 
 class MyHandler(FileSystemEventHandler):
-    path: str = ""
-    flow: Flow
+    _path: str = ""
+    _flow: Flow
 
-    def __init__(self, path, flow: Flow):
+    def __init__(self, path: str, flow: Flow):
         super().__init__()
-        self.path = path
-        self.flow = flow
+        self._path = path
+        self._flow = flow
+
+    def set_path(self, path: str):
+        self._path = path
 
     def read_file_content(self) -> str:
         try:
-            with open(self.path, "r") as file:
+            with open(self._path, "r") as file:
                 return "".join(file.readlines())
         except:
             return ""
 
     def start(self):
-        self.flow.set(self.read_file_content())
+        self._flow.set(self.read_file_content())
 
     def stop(self):
-        self.flow.set("")
+        self._flow.set("")
 
     def on_modified(self, event):
-        if event.src_path == self.path:
-            self.flow.set(self.read_file_content())
+        if event.src_path == self._path:
+            self._flow.set(self.read_file_content())
 
     def on_moved(self, event):
-        if self.path in [event.src_path, event.dest_path]:
-            self.flow.set(self.read_file_content())
+        if self._path in [event.src_path, event.dest_path]:
+            self._flow.set(self.read_file_content())
 
     def on_created(self, event):
-        if event.src_path == self.path:
-            self.flow.set(self.read_file_content())
+        if event.src_path == self._path:
+            self._flow.set(self.read_file_content())
 
     def on_deleted(self, event):
-        if event.src_path == self.path:
-            self.flow.set("")
+        if event.src_path == self._path:
+            self._flow.set("")
 
 
 class Input_File(Input):
-    path: str
-    event_handler: MyHandler
-    observer: BaseObserver
+    _path: str
+    _event_handler: MyHandler
+    _observer: BaseObserver
 
-    def __init__(self, name: str):
+    def __init__(self, name: str = "Input_File"):
         super().__init__(name)
 
-        self.path = os.path.abspath("")
-        self._outputs["data"] = Flow()
+        self._path = os.path.abspath("")
+        self.add_param(
+            "path",
+            self._path,
+            lambda key, val: self.set_path(val),
+        )
+        self.new_output("data")
 
-        self.add_param("path", self.path, lambda key, val: self.set_path(val))
-
-        self.event_handler = MyHandler(self.path, self._outputs["data"])
+        self._event_handler = MyHandler(
+            self._path,
+            self.get_output("data"),
+        )
 
         self.update()
 
     def set_path(self, path: str):
         abspath = os.path.abspath(path)
-        if self.path == abspath:
+        if self._path == abspath:
             return
-        self.path = abspath
-        self.event_handler.path = abspath
+        self._path = abspath
+        self._event_handler.set_path(abspath)
         if self.is_started():
             self.stop()
             self.start()
 
     def start(self):
-        self.observer = Observer()
-        self.observer.schedule(
-            self.event_handler,
-            path=os.path.dirname(self.path),
+        self._observer = Observer()
+        self._observer.schedule(
+            self._event_handler,
+            path=os.path.dirname(self._path),
             recursive=True,
         )
-        self.observer.start()
+        self._observer.start()
 
-        self.event_handler.start()
+        self._event_handler.start()
 
         self.set_status(STATUS_RUN)
 
     def stop(self):
-        self.observer.stop()
-        self.event_handler.stop()
+        self._observer.stop()
+        self._event_handler.stop()
         self.set_status(STATUS_STOP)
 
 
