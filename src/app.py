@@ -1,5 +1,5 @@
 import tkinter as tk
-
+from constants import *
 from interfaceSelectedWidget import InterfaceSelectedWidget
 from input_file import Input_File
 from output_file import Output_File
@@ -43,6 +43,7 @@ class App:
     _dragging_object: tk.Canvas | i_Widget
 
     _quiting: bool
+    _tkid_version: int
 
     def __init__(self, master: tk.Widget | None = None):
         self._widgets = []
@@ -50,6 +51,7 @@ class App:
         self._quiting = False
 
         self._fen = tk.Tk(master)
+        self._fen.title(APP_NAME)
         self._fen.geometry("900x500")
 
         self._can_process = tk.Canvas(
@@ -58,6 +60,11 @@ class App:
             highlightthickness=0,
         )
         self._can_process.place(relx=0, rely=0, relheight=1, relwidth=0.8)
+        self._tkid_version = self._can_process.create_text(
+            0, 0, text=f"github: {GITHUB}\tversion: {VERSION}", anchor="se"
+        )
+        self._fen.after(1, self._update_coords_version)
+        self._fen.bind("<Configure>", self._update_coords_version)
 
         self._frame_selected = InterfaceSelectedWidget(self._fen)
         self._frame_selected.place(relx=0.8, rely=0, relheight=0.9, relwidth=0.2)
@@ -140,6 +147,14 @@ class App:
         if self._quiting:
             return
         self._dragging_object.scan_dragto(event.x, event.y, 1)
+        self._update_coords_version()
+
+    def _update_coords_version(self, *args, **kwargs):
+        self._can_process.coords(
+            self._tkid_version,
+            self._can_process.canvasx(self._can_process.winfo_width()),
+            self._can_process.canvasy(self._can_process.winfo_height()),
+        )
 
     def quit(self):
         if self._quiting:
