@@ -4,6 +4,10 @@
 #
 #    pip-compile
 #
+altgraph==0.17.4
+    # via
+    #   macholib
+    #   pyinstaller
 bidict==0.23.1
     # via python-socketio
 dnspython==2.7.0
@@ -14,6 +18,18 @@ greenlet==3.1.1
     # via eventlet
 h11==0.14.0
     # via wsproto
+macholib==1.16.3
+    # via pyinstaller
+packaging==24.2
+    # via
+    #   pyinstaller
+    #   pyinstaller-hooks-contrib
+pillow==11.0.0
+    # via -r requirements.in
+pyinstaller==6.11.1
+    # via -r requirements.in
+pyinstaller-hooks-contrib==2024.10
+    # via pyinstaller
 python-engineio==4.10.1
     # via python-socketio
 python-socketio==5.11.4
@@ -24,3 +40,6 @@ watchdog==6.0.0
     # via -r requirements.in
 wsproto==1.2.0
     # via simple-websocket
+
+# The following packages are considered to be unsafe in a requirements file:
+# setuptools

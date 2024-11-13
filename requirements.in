@@ -1,10 +1,9 @@
 #dnspython==2.6.1
 #pyinstaller==5.0.1
 #datetime==5.5
-#pillow==10.3.0
-
-#pip-tools==7.4.1
 watchdog==6.0.0
 
 python-socketio==5.11.4
 eventlet==0.37.0
+pyinstaller==6.11.1
+pillow==11.0.0

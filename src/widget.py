@@ -1,6 +1,6 @@
 from flow import Flow
 import abc
-from collections.abc import Callable
+from typing import Callable
 
 # constants
 STATUS_STOP = 0

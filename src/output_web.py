@@ -4,7 +4,6 @@ import socketio
 import eventlet.wsgi
 from concurrent.futures.thread import ThreadPoolExecutor
 import socket
-from flow import Flow
 
 
 class Output_Web(Output):

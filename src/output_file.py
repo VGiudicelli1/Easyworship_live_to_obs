@@ -25,8 +25,11 @@ class Output_File(Output):
         self.add_param("path", "", lambda key, val: self._set_path(val))
 
     def _write(self, value: str):
-        with open(self._path, "w") as file:
-            file.write(value)
+        try:
+            with open(self._path, "w") as file:
+                file.write(value)
+        except:
+            pass
 
     def _set_path(self, new_path: str):
         if self.read_option("rename_on_pathChange"):
