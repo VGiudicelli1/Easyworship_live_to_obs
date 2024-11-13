@@ -18,3 +18,7 @@ envir/**
 **/out.txt
 
 **/.$*.bkp
+
+bin
+lib
+pyvenv.cfg
