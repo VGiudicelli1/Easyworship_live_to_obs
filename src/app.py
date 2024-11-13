@@ -11,26 +11,6 @@ from widget_test import Widget_Test, Widget_Test2
 # from transform import Transform
 
 
-"""
-Todo:
-OK -- button stop all
-OK -- on quit: check all are stop or reject
-
-Display selected widget:
-OK -- name
-OK -- options
-OK -- button Start/Stop
-   -- link inputs / full text
-
-Save & recall:
-   -- store all config in a file
-   -- recall config from a file
-
-EW input:
-   -- create EW input
-"""
-
-
 class App:
     _fen: tk.Tk
     _can_process: tk.Canvas
