@@ -1,0 +1,14 @@
+(C) button stop all @logic
+x (A) on quit, check all are stop or reject @logic
+x (A) display selected widget (name, options, parameters, ...) @interface
+(A) link widgets inputs outputs as flows @logic @interface
+(A) display flow @interface
+(A) store all components and their options/params and links into a file @logic
+(B) recall all components form a file @logic
+(B) create EW input @component
+(C) implement logic for units tests @logic @unit-testing
+(C) implement logic for errors @logic
+(C) add tests to all components @unit-testing
+(B) kill a component (force stop) @logic 
+(A) add a component @logic @interface
+(A) delete a component @logic @interface
