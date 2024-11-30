@@ -1,0 +1,44 @@
+html {
+    font-size: 100pt;
+    text-align: center;
+}
+
+body {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    --padding: 20pt;
+    --radius: 10pt;
+    /* display: grid; */
+    display: -ms-flexbox;
+    display: -webkit-flex;
+    display: flex;
+
+    -ms-flex-align: center;
+    -webkit-align-items: center;
+    -webkit-box-align: center;
+    align-items: center;
+    justify-content: center;
+}
+
+div.sizing {
+    position: absolute;
+    top: var(--padding);
+    left: var(--padding);
+    right: var(--padding);
+    bottom: var(--padding);
+    opacity: 0;
+}
+
+div.content {
+    /* display: inline-block; */
+    background-color: rgba(127, 127, 127, 0.3);
+    padding: var(--padding);
+}
+
+div {
+    border-radius: var(--radius);
+    box-sizing: border-box;
+}

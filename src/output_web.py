@@ -42,6 +42,7 @@ class Output_Web(Output):
         if not self.is_started():
             return
         self._message = self.read_input("data")
+        print(f"execute: <{self._message}>")
 
     def start(self):
         def run_server():
@@ -71,6 +72,7 @@ class Output_Web(Output):
                 eventlet.sleep(0)
                 if self._message is not None:
                     self._sio.emit("data", f"{self._message}")
+                    print(f"emit: <{self._message}>")
                     self._message = None
 
             print("stopping")

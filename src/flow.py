@@ -1,13 +1,37 @@
-from typing import Callable
+from __future__ import annotations
+from typing import Callable, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from widget import Widget
 
 
 class Flow:
+    __UID_MAX: int = 0
+    __UID_Objects: dict[int, Flow] = {}
+    _UID: int
+
     _value: str
     _callback: dict[int, Callable[[str], None]]
+    _master: Widget
 
-    def __init__(self, value: str = ""):
+    @staticmethod
+    def get_from_UID(UID: int) -> Flow:
+        return Flow.__UID_Objects[UID]
+
+    def get_UID(self) -> int:
+        return self._UID
+
+    def __init__(self, master: Widget, value: str = ""):
+        Flow.__UID_MAX += 1
+        self._UID = Flow.__UID_MAX
+        Flow.__UID_Objects[self._UID] = self
+
         self._value = value
+        self._master = master
         self._callback = {}
+
+    def get_master(self) -> Widget:
+        return self._master
 
     def set(self, value: str):
         if self._value == value:

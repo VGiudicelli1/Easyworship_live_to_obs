@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from flow import Flow
 import abc
 from typing import Callable
@@ -12,7 +14,9 @@ STATUS_ERROR = 3
 # class
 class Widget(metaclass=abc.ABCMeta):
     __UID_MAX: int = 0
+    __UID_Objects: dict[int, Widget] = {}
     _UID: int
+
     _on: bool
     _name: str
     _cb_change: dict[int, Callable[[], None]]
@@ -33,11 +37,16 @@ class Widget(metaclass=abc.ABCMeta):
             Callable[[str, str], None],
         ],
     ]
-    NULL: "NullWidget"
+    NULL: NullWidget
+
+    @staticmethod
+    def get_from_UID(UID: int) -> Widget:
+        return Widget.__UID_Objects[UID]
 
     def __init__(self, name: str):
         Widget.__UID_MAX += 1
         self._UID = Widget.__UID_MAX
+        Widget.__UID_Objects[self._UID] = self
 
         self._name = name
         self._on = False
@@ -100,7 +109,7 @@ class Widget(metaclass=abc.ABCMeta):
         flow: Flow = None,
     ):
         if flow is None:
-            flow = Flow()
+            flow = Flow(self)
         self._inputs[key] = [flow, flow.link(callback)]
 
     def link_input(self, key: str, flow: Flow):
@@ -112,7 +121,7 @@ class Widget(metaclass=abc.ABCMeta):
         ]
 
     def new_output(self, key: str, flow: Flow | None = None):
-        self._outputs[key] = flow if flow is not None else Flow()
+        self._outputs[key] = flow if flow is not None else Flow(self)
 
     def get_output(self, key: str) -> Flow:
         return self._outputs[key]

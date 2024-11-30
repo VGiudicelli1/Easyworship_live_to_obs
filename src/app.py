@@ -7,6 +7,7 @@ from output_web import Output_Web
 from widget import STATUS_STOP, Widget
 from i_widget import i_Widget
 from widget_test import Widget_Test, Widget_Test2
+from flow import Flow
 
 # from transform import Transform
 
@@ -73,39 +74,46 @@ class App:
         self._widgets.append(inp)
         self._i_widgets.append(i_inp)
 
-        out = Output_File("test2.txt")
-        out.set_param("path", "./src/test_out.txt")
-        out.link_input("data", inp.get_output("data"))
-        i_out = i_Widget(out, self._can_process)
-        i_out._x += 150
-        out.set_on(True)
-        self._widgets.append(out)
-        self._i_widgets.append(i_out)
+        # out = Output_File("test2.txt")
+        # out.set_param("path", "./src/test_out.txt")
+        # out.link_input("data", inp.get_output("data"))
+        # i_out = i_Widget(out, self._can_process)
+        # i_out._x += 150
+        # out.set_on(True)
+        # self._widgets.append(out)
+        # self._i_widgets.append(i_out)
 
         out2 = Output_Web("WEB")
         out2.link_input("data", inp.get_output("data"))
         i_out2 = i_Widget(out2, self._can_process)
         i_out2._x += 150
-        i_out2._y += 200
-        i_out2.update()
+        # i_out2._y += 200
+        # i_out2.update()
         out2.set_on(True)
         self._widgets.append(out2)
         self._i_widgets.append(i_out2)
 
-        test = Widget_Test()
-        i_test = i_Widget(test, self._can_process)
-        i_test._x += 300
-        i_test.update()
-        self._widgets.append(test)
-        self._i_widgets.append(i_test)
+        # test = Widget_Test()
+        # i_test = i_Widget(test, self._can_process)
+        # i_test._x += 300
+        # i_test.update()
+        # self._widgets.append(test)
+        # self._i_widgets.append(i_test)
 
-        test2 = Widget_Test2()
-        i_test2 = i_Widget(test2, self._can_process)
-        i_test2._x += 300
-        i_test2._y += 200
-        i_test2.update()
-        self._widgets.append(test2)
-        self._i_widgets.append(i_test2)
+        # test2 = Widget_Test2()
+        # i_test2 = i_Widget(test2, self._can_process)
+        # i_test2._x += 300
+        # i_test2._y += 200
+        # i_test2.update()
+        # self._widgets.append(test2)
+        # self._i_widgets.append(i_test2)
+
+    def get_all_outputs(self) -> dict[str, Flow]:
+        return {
+            f"{w.get_name()}:{key}": output
+            for w in self._widgets
+            for (key, output) in w._outputs.items()
+        }
 
     def on_click(self, event: tk.Event):
         if self._quiting:
