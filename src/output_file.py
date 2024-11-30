@@ -22,7 +22,7 @@ class Output_File(Output):
         self.add_option("empty_on_stop", True, lambda key, val: ())
         self.add_option("delete_on_stop", False, lambda key, val: ())
         self.add_option("rename_on_pathChange", True, lambda key, val: ())
-        self.add_param("path", "", lambda key, val: self._set_path(val))
+        self.add_param("path", "path", "", lambda key, val: self._set_path(val))
 
     def _write(self, value: str):
         try:

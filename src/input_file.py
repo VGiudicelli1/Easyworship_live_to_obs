@@ -60,6 +60,7 @@ class Input_File(Input):
         self._path = os.path.abspath("")
         self.add_param(
             "path",
+            "path",
             self._path,
             lambda key, val: self.set_path(val),
         )

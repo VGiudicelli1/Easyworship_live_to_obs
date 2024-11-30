@@ -1,6 +1,7 @@
 from widget import Widget
 import tkinter as tk
 from flow import Flow
+from tkinter import filedialog as fd
 
 
 class Option(tk.Frame):
@@ -36,6 +37,7 @@ class Param(tk.Frame):
     _value: tk.StringVar
     _input: tk.Entry
     _lbl_name: tk.Label
+    _type: str
 
     def __init__(self, master: tk.Widget):
         super().__init__(master)
@@ -47,8 +49,32 @@ class Param(tk.Frame):
         self._lbl_name = tk.Label(self)
         self._lbl_name.place(relx=0, rely=0, relheight=1, relwidth=0.4)
 
+        self._type = "str"
+
     def set_name(self, name: str):
         self._lbl_name.config(text=name)
+
+    def set_type(self, type_: str):
+        self._type = type_
+        if type_ == "path":
+
+            def select_file(e: None):
+                filetypes = (
+                    ("text files", "*.txt"),
+                    ("All files", "*.*"),
+                )
+
+                path = fd.askopenfilename(
+                    title="Open a file",
+                    initialdir=self._value.get(),
+                    filetypes=filetypes,
+                )
+                if path:
+                    self._value.set(path)
+
+            self._input.bind("<Button-1>", select_file)
+        else:
+            self._input.bind("<Button-1>", lambda e: ())
 
     def set_value(self, value: str):
         self._value.set(value)
@@ -209,6 +235,7 @@ class InterfaceSelectedWidget:
                 self._param[key] = Param(self._frame_content)
 
             self._param[key].set_name(key)
+            self._param[key].set_type(widget.get_param_type(key))
             self._param[key].set_value(widget.read_param(key))
             self._param[key].place(relx=0, y=y, relwidth=1, height=dY)
             y += dY

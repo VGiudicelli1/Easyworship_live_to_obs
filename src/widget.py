@@ -32,6 +32,7 @@ class Widget(metaclass=abc.ABCMeta):
     ]
     _params: dict[
         str,
+        str,
         tuple[
             str,
             Callable[[str, str], None],
@@ -83,23 +84,27 @@ class Widget(metaclass=abc.ABCMeta):
     def add_param(
         self,
         key: str,
+        type_: str,  # "text"|"path"|"number",
         default: str,
         callback: Callable[[str, str], None],
     ):
         if key in self._params:
             raise ValueError
-        self._params[key] = (default + "", callback)
+        self._params[key] = (type_, default + "", callback)
 
     def set_param(self, key: str, value: str):
         if not key in self._params:
             raise ValueError
-        current, callback = self._params[key]
+        type_, current, callback = self._params[key]
         if current == value:
             return
-        self._params[key] = (value, callback)
+        self._params[key] = (type_, value, callback)
         callback(key, value)
 
     def read_param(self, key: str) -> str:
+        return self._params[key][1]
+
+    def get_param_type(self, key: str) -> str:
         return self._params[key][0]
 
     def new_input(

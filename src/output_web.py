@@ -16,7 +16,7 @@ class Output_Web(Output):
     def __init__(self, name: str = "Output_Web"):
         super().__init__(name)
         self.new_input("data", self._execute)
-        self.add_param("port", "8000", lambda key, val: ())
+        self.add_param("port", "int", "8000", lambda key, val: ())
 
         self._sio = socketio.Server(
             cors_allowed_origins="*",
@@ -42,7 +42,6 @@ class Output_Web(Output):
         if not self.is_started():
             return
         self._message = self.read_input("data")
-        print(f"execute: <{self._message}>")
 
     def start(self):
         def run_server():
@@ -72,7 +71,6 @@ class Output_Web(Output):
                 eventlet.sleep(0)
                 if self._message is not None:
                     self._sio.emit("data", f"{self._message}")
-                    print(f"emit: <{self._message}>")
                     self._message = None
 
             print("stopping")
