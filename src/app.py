@@ -68,7 +68,7 @@ class App:
 
         # add items for tests
         inp = Input_File("test.txt")
-        inp.set_param("path", "./src/test.txt")
+        # inp.set_param("path", "./src/test.txt")
         i_inp = i_Widget(inp, self._can_process)
         inp.set_on(True)
         self._widgets.append(inp)
