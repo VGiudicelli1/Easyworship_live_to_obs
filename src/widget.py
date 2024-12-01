@@ -39,10 +39,14 @@ class Widget(metaclass=abc.ABCMeta):
         ],
     ]
     NULL: NullWidget
+    _selected: bool
 
     @staticmethod
     def get_from_UID(UID: int) -> Widget:
         return Widget.__UID_Objects[UID]
+
+    def get_UID(self) -> int:
+        return self._UID
 
     def __init__(self, name: str):
         Widget.__UID_MAX += 1
@@ -58,6 +62,7 @@ class Widget(metaclass=abc.ABCMeta):
         self._params = {}
 
         self._status = STATUS_STOP
+        self._selected = False
 
     def add_option(
         self,
@@ -68,6 +73,12 @@ class Widget(metaclass=abc.ABCMeta):
         if key in self._options:
             raise ValueError
         self._options[key] = (default, callback)
+
+    def set_selected(self, selected: bool):
+        if self._selected == selected:
+            return
+        self._selected = selected
+        self.update()
 
     def set_option(self, key: str, value: bool):
         if not key in self._options:

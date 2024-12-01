@@ -24,10 +24,12 @@ class i_Flow:
             raise ValueError
         i_Flow.__UID_objects[flow.get_UID()] = self
 
-        self._xy_begin = (None, None)
+        self._xy_begin = (0, 0)
         self._tkid_segments = {}
 
     def set_xy_begin(self, xy: tuple[float, float]):
+        if self._xy_begin == xy:
+            return
         self._xy_begin = xy
         for tkid_segments in self._tkid_segments.values():
             for tkid_segment in tkid_segments:
@@ -37,9 +39,24 @@ class i_Flow:
                 )
 
     def set_lxy_end(self, id_widget: int, l_xy: list[tuple[float, float]]):
-        # todo
-        for tkid_segment in l_xy:
-            c = self._canvas.coords(tkid_segment)
-            self._canvas.coords(
-                tkid_segment, self._xy_begin[0], self._xy_begin[1], c[2], c[3]
+        if not id_widget in self._tkid_segments:
+            self._tkid_segments[id_widget] = []
+
+        while len(self._tkid_segments[id_widget]) > len(l_xy):
+            self._canvas.delete(self._tkid_segments[id_widget].pop())
+
+        while len(self._tkid_segments[id_widget]) < len(l_xy):
+            self._tkid_segments[id_widget].append(
+                self._canvas.create_line(0, 0, 0, 0, width=2, fill="red")
             )
+
+        for tkid_segment, (x, y) in zip(self._tkid_segments[id_widget], l_xy):
+            self._canvas.coords(
+                tkid_segment, self._xy_begin[0], self._xy_begin[1], x, y
+            )
+
+
+if __name__ == "__main__":
+    from app import run_as_main_file
+
+    run_as_main_file()

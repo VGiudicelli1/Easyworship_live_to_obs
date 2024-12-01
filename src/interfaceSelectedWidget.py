@@ -195,7 +195,9 @@ class InterfaceSelectedWidget:
             self._widget.unlink_callback(self._widget_callback_id)
         except:
             pass
+        self._widget.set_selected(False)
         self._widget = widget
+        self._widget.set_selected(True)
 
         if self._widget is Widget.NULL:
             self._frame.place_forget()

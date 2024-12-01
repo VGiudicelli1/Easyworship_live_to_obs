@@ -3,14 +3,15 @@ from input import Input
 from output import Output
 from transform import Transform
 from widget import Widget, STATUS_BUSY, STATUS_RUN, STATUS_STOP, STATUS_ERROR
+from i_flow import i_Flow
 
 
 class i_Widget:
     _widget: Widget
     _canvas: Canvas
     _tkid_tem_onoff: int
-    _tkids_input: list[int]
-    _tkids_output: list[int]
+    _tkids_input: list[tuple[int, int]]
+    _tkids_output: list[tuple[int, int]]
     _tkid_rect: int
     _tkid_text: int
     _x: float
@@ -46,6 +47,7 @@ class i_Widget:
         self._y += dy
         self._scan_mark = (x, y)
         self._canvas.move(self._tag_UID, dx, dy)
+        self._update_flows()
 
     def _draw(self):
         self._tkid_rect = self._canvas.create_rectangle(
@@ -94,6 +96,10 @@ class i_Widget:
         else:
             self._canvas.itemconfig(self._tkid_rect, fill="white", outline="black")
 
+        self._canvas.itemconfig(
+            self._tkid_rect, width=2 if self._widget._selected else 1
+        )
+
         # coords
         self._canvas.coords(
             self._tkid_rect,
@@ -121,7 +127,7 @@ class i_Widget:
             (self._widget._outputs.keys(), self._tkids_output, False),
         ]:
             liste: list[str]
-            tkids: list[int]
+            tkids: list[tuple[int, int]]
             left: bool
             n = len(liste)
             for i, name in enumerate(liste):
@@ -159,6 +165,47 @@ class i_Widget:
             while len(tkids) > len(liste):
                 for id in tkids.pop():
                     self._canvas.delete(id)
+
+        self._update_flows()
+
+    def _update_flows(self):
+        # tkid_outputs + flows
+        # i_flow.set_xy_begin
+        for tkid, flow in zip(
+            self._tkids_output,
+            self._widget._outputs.values(),
+        ):
+            i_flow = i_Flow.get_from_UID(flow.get_UID(), self._canvas)
+            c = self._canvas.coords(tkid[0])
+            i_flow.set_xy_begin([c[4], c[5]])
+
+        # tkid_inputs + flows
+        # group by flow
+        # tkids_inputs + i_flows
+        # l_coords + i_flows
+        # i_flow.set_lxy_end
+        # TODO
+        id_flow__l_xy: dict[int, list[tuple[float, float]]] = {}
+        for (tkid, _), (flow, _) in zip(
+            self._tkids_input,
+            self._widget._inputs.values(),
+        ):
+            id = flow.get_UID()
+            if not id in id_flow__l_xy:
+                id_flow__l_xy[id] = []
+            c = self._canvas.coords(tkid)
+            id_flow__l_xy[id].append(
+                (
+                    (c[0] + c[2]) / 2,
+                    (c[1] + c[3]) / 2,
+                )
+            )
+        for id_flow, l_xy in id_flow__l_xy.items():
+            i_flow = i_Flow.get_from_UID(id_flow, self._canvas)
+            i_flow.set_lxy_end(self._widget.get_UID(), l_xy)
+
+        # cas input retire/changé: preview inputs without currents inputs ==> update
+        # TODO
 
 
 if __name__ == "__main__":

@@ -79,6 +79,7 @@ class App:
         # out.link_input("data", inp.get_output("data"))
         # i_out = i_Widget(out, self._can_process)
         # i_out._x += 150
+        # i_out._y += 200
         # out.set_on(True)
         # self._widgets.append(out)
         # self._i_widgets.append(i_out)
@@ -87,8 +88,6 @@ class App:
         out2.link_input("data", inp.get_output("data"))
         i_out2 = i_Widget(out2, self._can_process)
         i_out2._x += 150
-        # i_out2._y += 200
-        # i_out2.update()
         out2.set_on(True)
         self._widgets.append(out2)
         self._i_widgets.append(i_out2)

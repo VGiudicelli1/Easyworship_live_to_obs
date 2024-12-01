@@ -5,8 +5,8 @@ class Widget_Test(Widget):
     def __init__(self):
         super().__init__("Widget Test")
 
-        self.add_param("param_1", "default_value_1", self._on_param_change)
-        self.add_param("param_2", "default_value_2", self._on_param_change)
+        self.add_param("param_1", "str", "default_value_1", self._on_param_change)
+        self.add_param("param_2", "str", "default_value_2", self._on_param_change)
         self.add_option("option_1", True, self._on_option_change)
         self.add_option("option_2", False, self._on_option_change)
 
@@ -42,7 +42,7 @@ class Widget_Test2(Widget):
     def __init__(self):
         super().__init__("Widget Test2")
 
-        self.add_param("param_1", "default_value_1", self._on_param_change)
+        self.add_param("param_1", "str", "default_value_1", self._on_param_change)
         self.add_option("option_1", True, self._on_option_change)
         self.add_option("option_2534", False, self._on_option_change)
 
