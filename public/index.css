@@ -34,7 +34,8 @@ div.sizing {
 
 div.content {
     /* display: inline-block; */
-    background-color: rgba(127, 127, 127, 0.3);
+    background-color: rgba(127, 127, 127, 0.7);
+    color: white;
     padding: var(--padding);
 }
 
