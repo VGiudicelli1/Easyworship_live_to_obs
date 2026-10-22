@@ -1,0 +1,70 @@
+# Build et installation (proposition)
+
+## État actuel
+* `Makefile` : uniquement macOS, cible `dist/ew_to_txt.app` alors que la sortie PyInstaller s'appelle `ew_to_obs`, chemin `--paths lib/python3.8/site-packages` incompatible avec la CI en Python 3.12.
+* CI GitHub Actions : sur Ubuntu, installe les dépendances, lance `make`, `ls build`. **Pas d'artefact, pas de test, pas d'installeur.**
+* L'utilisateur doit recopier à la main `public/` dans l'application.
+* `requirements.txt` contient des paquets macOS.
+
+## Cible
+Un utilisateur télécharge **un installeur** depuis la page *Releases* du dépôt, l'exécute, lance « Easyworship → OBS » depuis le menu Démarrer / Applications.
+
+| Plateforme | Livrable | Outil |
+|---|---|---|
+| Windows (prioritaire : EW y est majoritaire) | `ew_to_obs-setup-X.Y.Z.exe` | PyInstaller `--onedir` + **Inno Setup** |
+| macOS | `ew_to_obs-X.Y.Z.dmg` (app `.app`) | PyInstaller + `create-dmg` |
+| Linux | Non requis | — |
+
+> À confirmer : quels OS l'utilisateur utilise réellement (voir `spec/user_feedback.md`).
+
+## Étapes
+
+### 1. Structure du dépôt
+```
+src/ew_to_obs/        code (paquet)
+src/ew_to_obs/public/ page web embarquée
+tests/
+packaging/windows/installer.iss
+packaging/macos/…
+pyproject.toml        dépendances + version unique
+```
+`pyproject.toml` remplace `requirements.in/.txt` et la version dupliquée dans `constants.py` (le tag Git fait foi).
+
+### 2. Exécution en local (développeur)
+```
+python -m venv .venv
+.venv/Scripts/activate        # ou source .venv/bin/activate
+pip install -e ".[dev]"
+pytest
+python -m ew_to_obs
+```
+
+### 3. Build local
+```
+pyinstaller packaging/ew_to_obs.spec --clean -y     # produit dist/ew_to_obs/
+iscc packaging/windows/installer.iss                # Windows : produit l'installeur
+```
+Le fichier `.spec` embarque `public/` via `datas=[("src/ew_to_obs/public", "ew_to_obs/public")]` et résout le chemin avec `importlib.resources` / `sys._MEIPASS` (plus de `os.chdir`).
+
+### 4. CI/CD (GitHub Actions)
+* Déclencheurs : `push`/`pull_request` → lint + tests + build de contrôle ; **tag `v*`** → build des installeurs + création d'une *Release* avec les artefacts.
+* Matrice : `windows-latest`, `macos-latest` ; Python 3.12.
+* Étapes : checkout → setup-python → `pip install -e ".[dev]"` → `pytest` → PyInstaller → installeur → `actions/upload-artifact` → (tag) `softprops/action-gh-release`.
+
+### 5. Installation côté utilisateur
+1. Télécharger l'installeur depuis *Releases*.
+2. Windows : SmartScreen peut avertir (exécutable non signé) → « Informations complémentaires » → « Exécuter quand même ». Documenter avec capture d'écran. Pare-feu : accepter la demande d'accès réseau privé au premier lancement (ou fournir une règle créée par l'installeur).
+3. Premier lancement : choisir le PC EasyWorship (liste auto ou saisie du nom) → l'URL pour OBS s'affiche.
+4. Dans OBS : *Sources → + → Navigateur* → coller l'URL → largeur/hauteur = résolution de la scène → cocher *Actualiser le navigateur quand la scène devient active*.
+5. Option : « Démarrer avec Windows » (raccourci dans le dossier Démarrage, créé par l'installeur ou l'application).
+
+### 6. Mise à jour
+Phase 1 : manuelle (télécharger la nouvelle version). Phase 2 (optionnel) : l'application interroge l'API GitHub *latest release* au démarrage et affiche « Nouvelle version disponible ».
+
+### 7. Désinstallation et données
+Désinstalleur Inno Setup ; la configuration utilisateur (`%APPDATA%\ew_to_obs`) est conservée (option pour la supprimer).
+
+## Points de vigilance
+* `--onefile` est plus lent au démarrage (extraction temporaire) et plus souvent détecté comme faux positif par les antivirus → préférer `--onedir`.
+* Signature de code : coûteuse ; à envisager seulement si SmartScreen pose problème en pratique.
+* Vérifier les *hidden imports* de PyInstaller (aiohttp, zeroconf) ; ajouter un **test de fumée** en CI qui lance l'exécutable construit en `--headless --selftest` et vérifie que `GET /` répond.
