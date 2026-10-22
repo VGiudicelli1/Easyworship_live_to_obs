@@ -79,7 +79,7 @@ Détails du protocole : `doc/protocole_easyworship.md`.
 | `web_server` | Sert `public/` + diffuse l'état aux navigateurs ; envoie l'état courant à chaque nouvelle connexion | `output_web.py` + `public/` |
 | `config` | Lecture/écriture JSON (hôte, port web, options) dans le dossier de config de l'OS | nouveau |
 | `ui` | Fenêtre : nom du PC EW, état, URL OBS (copier), démarrer/arrêter, journal | `interface.py` (v1) simplifiée |
-| `file_export` (optionnel) | Écrit le texte dans un fichier | `logger.LoggerSlideContentToTxt` |
+| ~~`file_export`~~ | Retiré du périmètre initial (possible plus tard) | `logger.LoggerSlideContentToTxt` |
 
 ### Choix techniques proposés
 * **Langage : Python ≥ 3.11** (le protocole est déjà écrit et validé en Python).
@@ -92,6 +92,8 @@ Détails du protocole : `doc/protocole_easyworship.md`.
 * **Build** : PyInstaller (`--onedir`, plus fiable que `--onefile` pour l'antivirus et le démarrage) puis installeur (voir `doc/build_et_installation.md`).
 
 ### Découverte et mémoire du PC EW (retour F2)
+Contexte : EW sur Windows avec **Bonjour** (obligatoire pour la télécommande), application sur le Mac d'OBS. Bonjour est précisément le service mDNS qui annonce `_ezwremote._tcp` : la découverte mDNS est donc cohérente avec le prérequis EW.
+
 1. Config : `ew_host` = **nom** (ex. `PC-REGIE` ou `PC-REGIE.local`), jamais une IP seule par défaut.
 2. Au démarrage : résoudre le nom (DNS local du routeur DHCP / NetBIOS / mDNS) à **chaque tentative de connexion**, de sorte qu'un changement d'IP DHCP soit sans effet.
 3. Premier lancement : lancer une recherche mDNS `_ezwremote._tcp.local.` et proposer la liste des PC trouvés ; mémoriser le choix.
@@ -105,7 +107,9 @@ Un seul message JSON : `{"visible": bool, "text": str}`. Détail dans `spec/inte
 * Latence diapo → OBS < 1 s.
 * Reconnexion automatique à EW ; l'application ne plante pas si EW est absent au démarrage.
 * Aucun accès internet requis à l'exécution.
-* Écoute web par défaut sur `0.0.0.0:8000` (OBS sur un autre PC) avec option « local seulement » ; documenter l'ouverture du pare-feu.
+* Écoute web par défaut sur `127.0.0.1:8000` (cas actuel : OBS et application sur le même Mac). Option « accessible sur le réseau » (`0.0.0.0`) pour la variante où l'application tourne sur le PC Windows d'EW ; documenter alors le pare-feu.
+* **Multiplateforme** : Python + bibliothèques pures (asyncio, aiohttp, Tkinter) ; aucun chemin ni séparateur codé en dur ; tests et build en CI sur macOS, Windows et Linux.
+* **Démarrage automatique** : Windows (dossier Démarrage ou clé `Run`), macOS (LaunchAgent / Éléments de connexion), Linux (`~/.config/autostart`) via une petite fonction par OS, optionnelle.
 * Aucune écriture dans le dossier d'installation.
 * Pas de secret ni de donnée personnelle stockés ; le `client_id` doit être **généré à la première exécution** (UUID) et non partagé entre installations.
 
@@ -115,5 +119,6 @@ Un seul message JSON : `{"visible": bool, "text": str}`. Détail dans `spec/inte
 | EW change son protocole | Haute | Tests sur captures, versions testées dans le README, message d'erreur explicite |
 | mDNS bloqué par le réseau (VLAN, Wi-Fi invité) | Moyenne | Saisie manuelle du nom/IP en repli |
 | Antivirus / SmartScreen bloque l'exécutable non signé | Moyenne | `--onedir`, installeur, documenter ; signature de code si budget |
-| Pare-feu Windows bloque le port web | Moyenne | Documenter, ou utiliser `localhost` si OBS sur le même PC |
+| Pare-feu Windows bloque le port web (variante app sur le PC d'EW) | Moyenne | Documenter ; cas actuel (app sur le Mac d'OBS) sans port exposé |
+| **Bonjour absent du PC EW** : la télécommande EW ne s'active pas | Haute | Détecter l'échec de découverte et afficher « Installer Bonjour sur le PC EasyWorship » ; documenter le prérequis |
 | Pas de matériel EW en CI | Haute | Simulateur EW minimal (serveur TCP rejouant des trames) pour les tests |

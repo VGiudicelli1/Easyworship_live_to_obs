@@ -11,11 +11,11 @@ Un utilisateur télécharge **un installeur** depuis la page *Releases* du dép�
 
 | Plateforme | Livrable | Outil |
 |---|---|---|
-| Windows (prioritaire : EW y est majoritaire) | `ew_to_obs-setup-X.Y.Z.exe` | PyInstaller `--onedir` + **Inno Setup** |
-| macOS | `ew_to_obs-X.Y.Z.dmg` (app `.app`) | PyInstaller + `create-dmg` |
-| Linux | Non requis | — |
+| macOS (**usage actuel** : Mac d'OBS) | `ew_to_obs-X.Y.Z.dmg` (app `.app`) | PyInstaller + `create-dmg` |
+| Windows (variante : PC d'EW, démarrage auto) | `ew_to_obs-setup-X.Y.Z.exe` | PyInstaller `--onedir` + **Inno Setup** |
+| Linux | Archive `.tar.gz` (ou AppImage plus tard) | PyInstaller |
 
-> À confirmer : quels OS l'utilisateur utilise réellement (voir `spec/user_feedback.md`).
+Objectif multiplateforme confirmé par le mainteneur : mêmes sources, matrice CI sur les trois OS. Priorité de livraison : macOS, puis Windows, puis Linux.
 
 ## Étapes
 
@@ -48,7 +48,7 @@ Le fichier `.spec` embarque `public/` via `datas=[("src/ew_to_obs/public", "ew_t
 
 ### 4. CI/CD (GitHub Actions)
 * Déclencheurs : `push`/`pull_request` → lint + tests + build de contrôle ; **tag `v*`** → build des installeurs + création d'une *Release* avec les artefacts.
-* Matrice : `windows-latest`, `macos-latest` ; Python 3.12.
+* Matrice : `macos-latest`, `windows-latest`, `ubuntu-latest` ; Python 3.12.
 * Étapes : checkout → setup-python → `pip install -e ".[dev]"` → `pytest` → PyInstaller → installeur → `actions/upload-artifact` → (tag) `softprops/action-gh-release`.
 
 ### 5. Installation côté utilisateur
@@ -56,7 +56,8 @@ Le fichier `.spec` embarque `public/` via `datas=[("src/ew_to_obs/public", "ew_t
 2. Windows : SmartScreen peut avertir (exécutable non signé) → « Informations complémentaires » → « Exécuter quand même ». Documenter avec capture d'écran. Pare-feu : accepter la demande d'accès réseau privé au premier lancement (ou fournir une règle créée par l'installeur).
 3. Premier lancement : choisir le PC EasyWorship (liste auto ou saisie du nom) → l'URL pour OBS s'affiche.
 4. Dans OBS : *Sources → + → Navigateur* → coller l'URL → largeur/hauteur = résolution de la scène → cocher *Actualiser le navigateur quand la scène devient active*.
-5. Option : « Démarrer avec Windows » (raccourci dans le dossier Démarrage, créé par l'installeur ou l'application).
+5. Option « Démarrer avec le système » : Windows (dossier Démarrage), macOS (Éléments de connexion / LaunchAgent), Linux (autostart). Cas visé : application sur le PC Windows d'EW.
+6. Prérequis côté EW : installer **Bonjour** sur le PC EW (sinon la télécommande EW ne s'active pas).
 
 ### 6. Mise à jour
 Phase 1 : manuelle (télécharger la nouvelle version). Phase 2 (optionnel) : l'application interroge l'API GitHub *latest release* au démarrage et affiche « Nouvelle version disponible ».

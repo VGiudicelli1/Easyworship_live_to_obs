@@ -1,17 +1,20 @@
 # Instructions pour Claude
 
-Projet : afficher dans OBS (source navigateur) le texte de la diapo en direct d'EasyWorship. Voir `readme.md` puis `spec/`.
+Projet : afficher dans OBS (source navigateur) le texte de la diapo en direct d'EasyWorship. Voir `README.md` puis `spec/`.
 
 ## Langue
 Documentation, commentaires et messages de commit en **français** ; identifiants du code en anglais.
 
 ## Où trouver quoi
 * Besoin : `spec/metier.md` · retours : `spec/user_feedback.md` · architecture : `spec/technique.md` · interfaces : `spec/interfaces.md`
-* Options et choix : `strategies.md` · protocole EW : `doc/protocole_easyworship.md` · build : `doc/build_et_installation.md`
+* Options et choix : `STRATEGIES.md` · protocole EW : `doc/protocole_easyworship.md` · build : `doc/build_et_installation.md`
 * Code historique (hors `main`) : branches `dev`/`version1` (client EW, **à réutiliser**), `version2` (page web `public/` à réutiliser, moteur widgets **à abandonner**), `link_flows` (ignorer).
 
 ## Règles
 * Une seule application, volontairement basique. **Ne pas** réintroduire de moteur générique « widgets/flux/connecteurs ».
+* Cibles : **macOS, Windows, Linux** (même code ; ne pas utiliser d'API spécifique à un OS sans repli).
+* Topologie actuelle : EW sur un PC Windows, OBS **et l'application** sur un Mac. Variante envisagée : application sur le PC Windows d'EW, en démarrage automatique.
+* EW exige **Bonjour** sur son PC pour activer la télécommande (protocole exploité) ; ne pas le contourner.
 * L'application est en **lecture seule** vis-à-vis d'EasyWorship.
 * Le protocole EW est non documenté : toute modification de `ew_client` doit être couverte par un test sur trames rejouées. Ne pas inventer de messages.
 * Aucune dépendance réseau externe à l'exécution (pas de CDN).
@@ -24,6 +27,4 @@ Documentation, commentaires et messages de commit en **français** ; identifiant
 * Build : voir `doc/build_et_installation.md`
 
 ## Questions ouvertes
-Voir `doc/plan_de_migration.md` (OS cibles, OBS sur le même PC, versions d'EW, fonctions à conserver).
-
-> Note : Claude Code lit `CLAUDE.md` (en majuscules) sur les systèmes sensibles à la casse ; ce fichier est nommé `claude.md` à la demande du mainteneur.
+Voir `doc/plan_de_migration.md` (questions restantes : capture de trames, fonctions optionnelles).

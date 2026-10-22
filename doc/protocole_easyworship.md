@@ -44,7 +44,7 @@ Les octets binaires n'existent que si `action ∈ {LiveData, ScheduleData, curre
 1. Mémoriser `requestrev` s'il est présent (il doit être renvoyé dans les requêtes ; sert à invalider les réponses périmées).
 2. Si `status` : stocker `liverev_pending`, `imagehash_pending`, `slide_rowid_pending` ; `contentvisible_pending = not (logo or black or clear)`.
 3. Si `LiveData` : vider les diapos, mémoriser `liverev` et `pres_rowid`, créer les diapos (rowid, revision), demander le titre (`slide_rowid:0`).
-4. Si `slideInfo` : stocker `content`/`title` dans la diapo ; si le titre correspond à la liste « crédits » → le contenu devient le *crédit* de la présentation et la diapo reste vide.
+4. Si `slideInfo` : stocker `content`/`title` dans la diapo ; (code existant seulement) si le titre correspond à la liste « crédits » → le contenu devient le *crédit* de la présentation et la diapo reste vide. Cette règle est retirée de la cible.
 5. Si le contenu doit être visible et que `imagehash_pending ≠ imagehash` :
    * si `liverev_pending ≠ liverev` → vider la file d'envoi, `GetLiveData` ;
    * sinon demander `getSlideInfo` pour toute diapo non encore demandée ; quand toutes ont répondu et que la diapo courante (`slide_rowid_pending`) existe avec un contenu → **événement `current_slide_changed`**, `imagehash ← imagehash_pending`.
@@ -58,7 +58,9 @@ Les octets binaires n'existent que si `action ∈ {LiveData, ScheduleData, curre
 * Le contenu est du texte brut ; le formatage (gras, retours à la ligne) n'a pas été étudié.
 * La table des octets inconnus (`unknownrawdata0`, `unknownrawdata5`) n'est pas comprise.
 * Plusieurs télécommandes peuvent-elles se connecter en même temps avec le même `uid` ? Inconnu ; d'où l'intérêt d'un UUID par installation.
-* Versions d'EW testées : **inconnues** (README : « I hope because i use it »). À renseigner avec l'utilisateur.
+* Version d'EW testée : **EW 7** (de mémoire du mainteneur, version exacte à confirmer ; la découverte de port dynamique suppose ≥ 7.2.3).
+* **Prérequis EW : Bonjour installé** sur le PC EasyWorship, sinon la télécommande n'est pas activable (et le service mDNS `_ezwremote._tcp` n'est pas annoncé).
+* Captures de trames réelles : **pas encore disponibles** (pas d'accès à EW pour le moment). Les tests initiaux devront utiliser des trames reconstruites depuis le code / ew2vm, à valider ensuite.
 
 ## 6. Pistes de tests sans EW
 

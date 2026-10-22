@@ -32,7 +32,7 @@ class EwClient:
 | `GET /index.js`, `/index.css` | Ressources statiques embarquées (aucun CDN) |
 | `GET /ws` | Mise à niveau WebSocket |
 
-URL à saisir dans OBS : `http://<nom-du-pc>:<port>/` (par défaut port 8000), affichée dans l'UI avec bouton « copier ». Paramètres de requête envisagés pour personnaliser sans reconstruire : `?bg=rgba(0,0,0,.6)&color=white&padding=20`.
+URL à saisir dans OBS : `http://localhost:<port>/` (application sur le Mac d'OBS) ou `http://<nom-du-pc-ew>:<port>/` (application sur le PC EW, écoute réseau activée) (par défaut port 8000), affichée dans l'UI avec bouton « copier ». Paramètres de requête envisagés pour personnaliser sans reconstruire : `?bg=rgba(0,0,0,.6)&color=white&padding=20`.
 
 ### WebSocket `/ws`
 * Serveur → navigateur, un seul type de message JSON :
@@ -58,8 +58,7 @@ Une seule fenêtre, pas de canvas ni de panneau latéral.
 │ Navigateurs    : 1 connecté                   │
 │ URL pour OBS   : http://PC-REGIE:8000/ [Copier]│
 │ Aperçu         : « Dieu est amour … »         │
-│ ☐ Écrire aussi dans un fichier : [ … ] [Parcourir]│
-│ ☑ Démarrer avec Windows                       │
+│ ☐ Démarrer avec le système                    │
 │                       [Ouvrir les logs] [Quitter]│
 └───────────────────────────────────────────────┘
 ```
@@ -79,11 +78,9 @@ Emplacement : dossier de configuration utilisateur de l'OS (voir `spec/technique
   "version": 1,
   "ew_host": "PC-REGIE",
   "web_port": 8000,
-  "web_bind": "0.0.0.0",
+  "web_bind": "127.0.0.1",
   "client_id": "<uuid généré au premier lancement>",
-  "export_file": { "enabled": false, "path": "" },
-  "credit_titles": ["Title", "Credit", "Credits"],
-  "presentation_filter": []
+  "autostart": false
 }
 ```
 

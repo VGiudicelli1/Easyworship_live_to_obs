@@ -16,6 +16,12 @@ Afficher dans **OBS** le texte de la diapo en direct d'**EasyWorship** (EW), via
 
 Objectif : **une seule application**, simple, qui se souvient du PC EasyWorship, avec un installeur.
 
+## Prérequis
+
+* **EasyWorship 7** avec la *télécommande* activée. EW exige que **Bonjour** (Apple) soit installé sur son PC pour activer cette télécommande.
+* **OBS** avec une *Source navigateur*.
+* Application visée : macOS, Windows et Linux.
+
 ## Documentation (branche `claude/analyse_repo`)
 
 | Document | Contenu |
@@ -24,7 +30,7 @@ Objectif : **une seule application**, simple, qui se souvient du PC EasyWorship,
 | [spec/user_feedback.md](spec/user_feedback.md) | Retours utilisateur et actions |
 | [spec/technique.md](spec/technique.md) | Inventaire de l'existant, dette, architecture cible |
 | [spec/interfaces.md](spec/interfaces.md) | Interfaces EW, navigateur, opérateur, configuration |
-| [strategies.md](strategies.md) | Options étudiées et recommandation |
+| [STRATEGIES.md](STRATEGIES.md) | Options étudiées et recommandation |
 | [doc/branches.md](doc/branches.md) | Analyse de chaque branche |
 | [doc/protocole_easyworship.md](doc/protocole_easyworship.md) | Protocole de télécommande EW tel que le code l'utilise |
 | [doc/build_et_installation.md](doc/build_et_installation.md) | Build, installeur, CI/CD |
@@ -34,7 +40,7 @@ Objectif : **une seule application**, simple, qui se souvient du PC EasyWorship,
 
 | Version d'EasyWorship | Compatible |
 |:--:|:--:|
-| inconnue | « J'espère, je l'utilise » (à renseigner) |
+| EasyWorship 7 (version exacte à confirmer, ≥ 7.2.3 pour la découverte du port) | Utilisée par le mainteneur ; test réel en juin 2024 |
 
 | Version d'OBS | Compatible |
 |:--:|:--:|

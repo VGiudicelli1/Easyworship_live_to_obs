@@ -32,7 +32,7 @@ Décisions à prendre pour repartir sur une application basique. Pour chaque poi
 | Découverte mDNS (`zeroconf`) | Zéro saisie | Multicast parfois bloqué ; dépendance en plus |
 | **Combinaison : mDNS pour proposer, nom mémorisé, saisie manuelle en repli** | Couvre tous les cas | Un peu plus de code |
 
-**Recommandation : la combinaison.** À valider sur le réseau réel (voir risque dans `spec/technique.md`). Ordre de développement : nom mémorisé d'abord (couvre la demande), mDNS ensuite.
+**Recommandation : la combinaison.** Le prérequis EW « Bonjour installé » garantit que l'annonce mDNS existe côté PC EW. À valider sur le réseau réel (voir risque dans `spec/technique.md`). Ordre de développement : nom mémorisé d'abord (couvre la demande), mDNS ensuite.
 
 ## S4. Sortie vers OBS
 
@@ -49,7 +49,7 @@ Décisions à prendre pour repartir sur une application basique. Pour chaque poi
 | Option | + | − |
 |---|---|---|
 | Script manuel / Makefile | Simple | Source du problème actuel |
-| **GitHub Actions : PyInstaller `--onedir` + Inno Setup (Windows) / dmg (macOS), release sur tag** | Reproductible, un clic pour publier | Mise en place initiale ; exécutable non signé |
+| **GitHub Actions : PyInstaller `--onedir` sur macOS, Windows, Linux (+ dmg / Inno Setup), release sur tag** | Reproductible, un clic pour publier | Mise en place initiale ; exécutable non signé |
 | Paquet pip (`pipx install`) | Très simple pour les devs | Inadapté aux opérateurs non techniques |
 
 **Recommandation : GitHub Actions + installeur.** Voir `doc/build_et_installation.md`.
@@ -68,7 +68,7 @@ Décisions à prendre pour repartir sur une application basique. Pour chaque poi
 
 ## S8. Ce qu'on ne fait pas (YAGNI)
 
-Connecteurs configurables, sauvegarde de graphes, plugins, multi-sources, contrôle d'EW, base de données, authentification.
+Export fichier, règle « crédits », filtre de présentations (retirés, à rediscuter), connecteurs configurables, sauvegarde de graphes, plugins, multi-sources, contrôle d'EW, base de données, authentification.
 
 ## Synthèse
 

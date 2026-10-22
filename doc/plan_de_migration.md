@@ -10,8 +10,9 @@ Chaque étape est livrable séparément et se termine par une application qui fo
 | 3 | `config` (JSON) + `client_id` généré + hôte mémorisé | Redémarrage = même hôte, aucune saisie | nouveau |
 | 4 | `discovery` : résolution du nom à chaque connexion + recherche mDNS | Changement d'IP DHCP sans intervention (test sur site) | nouveau |
 | 5 | `ui` Tkinter minimale (voir `spec/interfaces.md`) | Opérateur non technique réussit sans aide | `interface.py` v1 |
-| 6 | Packaging Windows (PyInstaller + Inno Setup) et release par tag | Installeur téléchargeable, installation sur PC vierge | `Makefile`, CI |
-| 7 | Packaging macOS (si besoin) | `.dmg` | `Makefile` |
+| 6 | Packaging Windows (PyInstaller + Inno Setup, variante PC d'EW) et release par tag | Installeur téléchargeable, installation sur PC vierge | `Makefile`, CI |
+| 7 | Packaging macOS (cible actuelle) et Linux (archive) | `.dmg` / archive | `Makefile` |
+| 7bis | Démarrage automatique par OS (option) | Redémarrage session = app lancée | nouveau |
 | 8 | Essai réel pendant un culte, correction | Critères de réussite de `spec/metier.md` | — |
 | 9 | Documentation utilisateur (captures), README, versions EW/OBS testées | README à jour | — |
 | 10 | Ménage de dépôt : fusion dans `main`, tags `v1.0.0` / `v2.0.0-abandonné`, suppression de `link_flows`, `dev`/`version1` | Branches propres | — |
@@ -20,9 +21,10 @@ Chaque étape est livrable séparément et se termine par une application qui fo
 1 → 2 → 3 donne tout de suite la valeur principale (EW → OBS sans fichier intermédiaire), testable en `--headless`, avant tout travail d'interface. Le packaging (6) est mis tôt car c'est le point faible historique ; on le fait tourner dès qu'il y a un exécutable minimal.
 
 ## Questions ouvertes (bloquantes pour certaines étapes)
-1. OS cibles (étape 6–7) ?
-2. OBS sur le même PC qu'EW (adresse d'écoute, pare-feu) ?
-3. Version(s) d'EasyWorship utilisée(s) ?
-4. Conserver l'export fichier, la règle « crédits », le filtre de présentations ?
-5. Accès à une capture de trames réelles d'EW, ou possibilité d'en faire une ?
-6. Rendu souhaité dans OBS (fond semi-transparent actuel, police, position) : personnalisable par paramètres d'URL ?
+**Réponses du mainteneur (2e échange)** : multiplateforme Mac/Windows/Linux (usage Mac, Windows envisagé en démarrage auto sur le PC d'EW) ; OBS sur Mac, EW sur Windows, applications sur le Mac ; EW 7 ; export fichier / crédits / filtre probablement abandonnés ; capture de trames à faire dès l'accès à EW. Prérequis : Bonjour sur le PC EW.
+
+Restent ouvertes :
+1. Capture de trames réelles (bloquant pour les étapes 1 et 4 : on avance avec des trames de ew2vm et on valide ensuite).
+2. Version exacte d'EW 7.
+3. Démarrage automatique : à la demande, étape 7bis (après la v1 de l'installeur).
+4. Rendu souhaité dans OBS (fond semi-transparent actuel, police, position) : personnalisable par paramètres d'URL ?
