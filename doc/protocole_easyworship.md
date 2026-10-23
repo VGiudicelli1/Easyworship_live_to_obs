@@ -226,3 +226,29 @@ Source : `tests/fixtures/ew_session_150_diapos.jsonl` (présentation de test « 
 * Contenu : jusqu'à **987 caractères** sur une seule ligne (sans `\r\n`) : le texte est retourné à la ligne par l'affichage. La page OBS doit rester lisible avec ce volume (taille de police calculée par dichotomie).
 * Navigation dans la présentation : un seul `status` par diapo, aucune requête supplémentaire ; mêmes combinaisons `logo`/`black`/`clear` que précédemment (17 changements de diapo, toutes les combinaisons testées).
 * **Limite non testée** : au-delà de ~1 000 diapos le `LiveData` dépasse 16 384 octets (taille de lecture) et peut arriver en plusieurs segments TCP. Le décodeur de trames doit de toute façon traiter les messages **incomplets** (accumulation jusqu'à `size` octets) ; à couvrir par un test unitaire avec un message découpé en morceaux arbitraires.
+
+## 14. Accès par IP, emojis, texte formaté, relance d'EW, médias (12e et 13e captures, EW 7.4.1.9)
+
+Sources : `tests/fixtures/ew_session_emojis_relance_anonymisee.jsonl` et `ew_session_medias_anonymisee.jsonl` (noms de médias anonymisés ; les textes de test des présentations de test sont conservés).
+
+### Accès par adresse IP
+* Avec l'adresse IPv4 à la place du nom : découverte du port en **0,02 s** et connexion TCP en **0,01 s** (0,46 s dans l'autre capture). Le mainteneur confirme que c'est « instantané », contrairement au nom DNS.
+* **Cause probable** (non mesurée directement, les captures antérieures n'enregistraient pas le temps de résolution) : la résolution du nom `.local` sur le Mac (requêtes A **et** AAAA : l'AAAA, sans réponse côté EW, attend un délai). Correction faite dans `tools/ew_capture.py` : le nom n'est résolu qu'en **IPv4** (aucune requête AAAA, IPv6 seulement si le nom n'a aucune IPv4), une seule fois par tentative, et le temps est enregistré (`resolve_s`). À vérifier en relançant la capture avec le nom.
+* Conséquence de conception (`spec/technique.md`) : la configuration garde le **nom** et la **dernière IPv4 connue** ; la connexion tente d'abord l'IP mémorisée (instantané) pendant que le nom est re-résolu pour détecter un changement d'IP DHCP.
+
+### Emojis et texte formaté
+* Les emojis (plans supplémentaires, séquences à jonction `ZWJ` comme 🙂‍↔️ et ❤️‍🔥, sélecteurs de variation comme ☺️) arrivent en UTF-8 intacts.
+* La ligne d'emojis se termine par un **`U+FFFD`** (caractère de remplacement) après 👉 : il est **envoyé par EW lui-même** (octets `EF BF BD` ; le décodage du script est strict, un octet invalide aurait été signalé). Le texte source contenait probablement un caractère incomplet. L'application relaie le texte tel quel ; par précaution, **décoder l'UTF-8 avec remplacement** plutôt que rejeter un message entier si EW envoyait un jour des octets invalides.
+* **La mise en forme (gras, italique, souligné, ombré, contouré) n'est pas transmise** : `content` est du texte brut, sans balise ni champ de style ; les espaces doubles sont conservés. Les `label_*color` concernent l'étiquette, pas le texte.
+* La page web devra s'appuyer sur les polices emoji du système (OBS/navigateur embarqué).
+
+### Relance d'EW (capture « emojis », t = 20,7 s)
+* Même signature que la fermeture d'EW (§11) : dernier `status` (seul `schedulerev` change) puis EOF. Une première tentative de découverte échoue (6 s : 2 essais de 3 s, EW pas encore prêt), la connexion revient à 35,9 s (≈ 15 s après la fermeture), sur un **nouveau port** (61322), `paired` immédiat.
+* **État transitoire au démarrage d'EW** : premier `status` avec `pres_rowid "0"`, `slide_rowid "0"`, `liverev "0"`, `schedulerev "0"`, `imagehash ""` (EW pas initialisé), puis 7 ms plus tard un second `status` avec `slide_rowid -100049` et un vrai `liverev`. Deux `GetLiveData` (un par `status`) donnent deux `LiveData` identiques. Rien en direct dans les deux cas (`imagehash` vide) : texte vide ; un `liverev "0"` n'est pas un contenu.
+* Heartbeat d'EW : 3ᵉ observation, **≈ 2,3 s après `paired`**, toujours lorsque rien n'était en direct à la connexion et jamais lorsqu'une diapo l'était déjà (hypothèse, sans conséquence : ignorer ces heartbeats).
+
+### Médias (capture « médias »)
+* Une diapo **vidéo ou image** a `content = ""`, qu'elle soit une diapo entière ou intégrée dans une diapo. Quatre cas capturés : vidéo en diapo entière, vidéo intégrée dans une diapo, image en diapo entière, image intégrée dans une diapo.
+* Une diapo-média entière porte le **nom du média dans `title`** (étiquette colorée, `label_bkcolor 12014644`) ; intégrée dans une diapo, `title` reste vide.
+* Aucun message propre à la lecture vidéo (début, fin, position) n'a été observé : seulement un `status` par diapo, avec un `imagehash` distinct par média.
+* ⇒ Média en direct = `visible = true`, `text = ""`. Ne pas afficher le nom du média.

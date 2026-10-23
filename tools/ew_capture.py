@@ -112,14 +112,28 @@ def parse_mdns_response(data):
 
 
 def _resolve(host, port, socktype):
-    """Adresses du nom, **IPv4 d'abord** (l'IPv6 n'a jamais répondu côté EW), sans doublons."""
-    infos = socket.getaddrinfo(host, port, 0, socktype)
-    seen, out = set(), []
-    for family, _, _, _, addr in sorted(infos, key=lambda i: 0 if i[0] == socket.AF_INET else 1):
-        if addr[:2] not in seen:
-            seen.add(addr[:2])
-            out.append((family, addr))
+    """Adresses du nom : **IPv4 seulement** si le nom en a (aucune requête AAAA, donc pas son délai sur un
+    nom « .local »), IPv6 en dernier recours uniquement. Sans doublons."""
+    out = []
+    for family in (socket.AF_INET, socket.AF_INET6):
+        try:
+            infos = socket.getaddrinfo(host, port, family, socktype)
+        except socket.gaierror:
+            continue
+        seen = set()
+        for fam, _, _, _, addr in infos:
+            if fam == family and addr[:2] not in seen:
+                seen.add(addr[:2])
+                out.append((fam, addr))
+        if out:
+            break
+    if not out:
+        raise socket.gaierror("nom non résolu : %s" % host)
     return out
+
+
+def _with_port(addr, port):
+    return (addr[0], port) + tuple(addr[2:])
 
 
 def _discover_dnspython(host, mdns_port, timeout, log):
@@ -142,11 +156,11 @@ def _discover_dnspython(host, mdns_port, timeout, log):
     return rrset[0].port, {"ptr": [str(srv_name)], "methode": "dnspython"}
 
 
-def _discover_manual(host, mdns_port, timeout, log, attempts=2):
+def _discover_manual(host, mdns_port, timeout, log, attempts=2, targets=None):
     """Requête mDNS unicast envoyée **en parallèle** à toutes les adresses de l'hôte ; la première réponse gagne.
 
     Évite d'attendre le délai de chaque adresse IPv6 injoignable avant d'arriver à l'IPv4 qui répond."""
-    targets = _resolve(host, mdns_port, socket.SOCK_DGRAM)
+    targets = targets or _resolve(host, mdns_port, socket.SOCK_DGRAM)
     errors = []
     for attempt in range(attempts):
         query_id = int.from_bytes(os.urandom(2), "big") or 1
@@ -186,11 +200,11 @@ def _discover_manual(host, mdns_port, timeout, log, attempts=2):
         finally:
             for s in socks:
                 s.close()
-        errors.append("aucune réponse en %.0f s de %s" % (timeout, [a[0] for a in targets]))
+        errors.append("aucune réponse en %.0f s de %s" % (timeout, [a[1][0] for a in targets]))
     raise RuntimeError("; ".join(errors) or "aucune réponse")
 
 
-def discover_port(host, timeout=3.0, log=print, mdns_port=MDNS_PORT, use_dnspython=False):
+def discover_port(host, timeout=3.0, log=print, mdns_port=MDNS_PORT, use_dnspython=False, targets=None):
     """Trouve le port TCP de la télécommande (requête mDNS manuelle parallèle ; dnspython en option)."""
     if use_dnspython:
         try:
@@ -199,14 +213,14 @@ def discover_port(host, timeout=3.0, log=print, mdns_port=MDNS_PORT, use_dnspyth
             log("  dnspython absent : requête mDNS manuelle")
         except Exception as e:  # noqa: BLE001 - tout rapporter puis tenter le repli
             log("  [dnspython] échec : %s: %s" % (type(e).__name__, e))
-    return _discover_manual(host, mdns_port, timeout, log)
+    return _discover_manual(host, mdns_port, timeout, log, targets=targets)
 
 
-def connect_tcp(host, port, log=print, first_ip=None, timeout=3.0, total=10.0):
+def connect_tcp(host, port, log=print, first_ip=None, timeout=3.0, total=10.0, targets=None):
     """Connexion TCP : IPv4 d'abord (ou l'IP qui a répondu au mDNS), délai court par adresse, 10 s au total.
 
     La V1 (socket.create_connection, 7 s par adresse) attendait chaque IPv6 injoignable avant l'IPv4."""
-    cands = _resolve(host, port, socket.SOCK_STREAM)
+    cands = [(f, _with_port(a, port)) for f, a in targets] if targets else _resolve(host, port, socket.SOCK_STREAM)
     if first_ip:
         cands.sort(key=lambda c: 0 if c[1][0] == first_ip else 1)
     deadline = time.monotonic() + total
@@ -435,13 +449,26 @@ def capture(host, port, out, duration, active, redact, client_id, log=print, dev
 
     try:
         while time_left():
+            t0 = time.monotonic()
+            try:
+                targets = _resolve(host, mdns_port, socket.SOCK_DGRAM)
+            except OSError as e:
+                t_res = time.monotonic() - t0
+                log("ECHEC de la résolution du nom %s après %.1f s : %s" % (host, t_res, e))
+                get_rec().write("info", msg={"event": "resolve_failed", "error": str(e), "elapsed_s": round(t_res, 2)})
+                if not reconnect:
+                    return None
+                wait_retry("résolution du nom impossible")
+                continue
+            t_res = time.monotonic() - t0
+            log("Résolution de %s : %.2f s -> %s" % (host, t_res, [a[0] for _, a in targets]))
             cur_port, via = port, None
             t_disc = 0.0
             if cur_port is None:
                 log("Recherche du port EW par mDNS sur %s:%d ..." % (host, mdns_port))
                 t0 = time.monotonic()
                 try:
-                    cur_port, parsed = discover_port(host, log=log, mdns_port=mdns_port, use_dnspython=use_dnspython)
+                    cur_port, parsed = discover_port(host, log=log, mdns_port=mdns_port, use_dnspython=use_dnspython, targets=targets)
                 except (OSError, RuntimeError, ValueError) as e:
                     t_disc = time.monotonic() - t0
                     log("ECHEC de la découverte mDNS après %.1f s : %s" % (t_disc, e))
@@ -458,7 +485,7 @@ def capture(host, port, out, duration, active, redact, client_id, log=print, dev
             log("Connexion à %s:%d ..." % (host, cur_port))
             t0 = time.monotonic()
             try:
-                sock, address = connect_tcp(host, cur_port, log=log, first_ip=via)
+                sock, address = connect_tcp(host, cur_port, log=log, first_ip=via, targets=targets)
             except OSError as e:
                 log("ECHEC de la connexion : %s" % e)
                 get_rec().write("info", msg={"event": "connect_failed", "error": str(e), "elapsed_s": round(time.monotonic() - t0, 2)})
@@ -468,7 +495,7 @@ def capture(host, port, out, duration, active, redact, client_id, log=print, dev
                 continue
             t_conn = time.monotonic() - t0
             r = get_rec()
-            r.write("info", msg={"event": "connected", "host": host, "port": cur_port, "address": address, "discovery_s": round(t_disc, 2), "connect_s": round(t_conn, 2), "active": active, "redact": redact, "python": sys.version.split()[0]})
+            r.write("info", msg={"event": "connected", "host": host, "port": cur_port, "address": address, "resolve_s": round(t_res, 2), "discovery_s": round(t_disc, 2), "connect_s": round(t_conn, 2), "active": active, "redact": redact, "python": sys.version.split()[0]})
             session = Session(sock, r, active, client_id, log, device_name)
             log("Connecté. Capture dans %s (Ctrl+C pour arrêter)." % out)
             reason = None
@@ -758,7 +785,7 @@ def selftest():
     silent.close()
     socket.getaddrinfo = lambda *a, **k: [(socket.AF_INET6, socket.SOCK_STREAM, 6, "", ("fe80::1", 80, 0, 0)), (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("192.168.0.9", 80))]
     try:
-        check(_resolve("x", 80, socket.SOCK_STREAM)[0][0] == socket.AF_INET, "_resolve place l'IPv4 avant l'IPv6")
+        check(_resolve("x", 80, socket.SOCK_STREAM)[0][0] == socket.AF_INET, "_resolve ne garde que l'IPv4 quand il y en a")
     finally:
         socket.getaddrinfo = real_getaddrinfo
     lis_lh = socket.socket()
