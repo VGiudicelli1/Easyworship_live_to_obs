@@ -138,12 +138,12 @@ Conséquences pour l'application :
 Sources : `tests/fixtures/ew_session_diapos_vides_anonymisee.jsonl` (40 s) et `tests/fixtures/ew_session_edition_live_anonymisee.jsonl` (40 s). Présentations de test créées par le mainteneur (la présentation « 443 » est conservée telle quelle dans les fixtures car ses textes décrivent les cas testés ; les autres sont anonymisées).
 
 ### Port
-Le port de la télécommande valait **63612** dans ces deux captures contre 57395 plus tôt : il change (probablement au redémarrage d'EW). **Ne jamais mémoriser le port**, le redécouvrir à chaque connexion.
+Le port TCP de la télécommande valait **63612** dans ces deux captures contre 57395 plus tôt. Ce n'est pas un réglage : EW l'attribue lui-même (dynamique depuis EW 7.2.3, comme le note le commentaire de `ew_api.py`) et l'application le **découvre par mDNS à chaque connexion**. Le « port » de l'interface V1 (5353) est le port **mDNS** de la requête, pas celui de la télécommande ; la V1 n'a jamais demandé à l'utilisateur de saisir le port TCP, et le nôtre non plus. On ne sait pas quand exactement EW change de port ; voir §11.
 
 ### Diapos vides ou sans texte
 * **Elles existent** : `slideInfo.content = ""`, `title = ""`, tous les autres champs normaux, et un `status` habituel à l'affichage. Une présentation de 5 diapos vides a été capturée ; la présentation « 443 » contient aussi une diapo vide au milieu.
 * **Toutes les diapos vides partagent la même image** donc le même `imagehash`. Dans la capture « diapos vides » : 11 changements de diapo avec `imagehash` inchangé, dont **10 jamais suivis d'un autre `status`** (dans la 5e capture : 3 changements, tous suivis d'un 2e `status` avec nouvel `imagehash`).
-  → La logique V1 (déclenchement quand `imagehash` change) **n'aurait jamais vu ces 10 changements** : le texte précédent serait resté affiché. La V1 testait en plus `if currentSlide.content:` (diapo vide ignorée). Confirmation expérimentale de la règle du §7 : l'état se recalcule à **chaque** `status`.
+  → **EW signale pourtant chaque changement** : à chaque clic un `status` arrive avec le nouveau `slide_rowid` (8846 → 8884 → 8885 → 8886 → 8887…, voir la fixture) ; c'est seulement l'`imagehash` qui reste identique parce que les images sont identiques. La télécommande n'est donc pas en défaut : la logique V1 (déclenchement quand `imagehash` change) **n'aurait jamais vu ces 10 changements**, le texte précédent serait resté affiché. La V1 testait en plus `if currentSlide.content:` (diapo vide ignorée). Confirmation expérimentale de la règle du §7 : l'état se recalcule à **chaque** `status`.
 * Comportement attendu côté sortie : diapo vide ⇒ `text = ""` (affichage masqué), pas de maintien du texte précédent.
 
 ### Étiquettes (`title` des diapos)
@@ -174,7 +174,7 @@ Sources : `tests/fixtures/ew_session_coupure_wifi_anonymisee.jsonl`, `ew_session
 
 ### Fermeture d'EW (test 2)
 * À 8,876 s : un dernier `status` (même diapo, même `liverev`, seul `schedulerev` change : EW enregistre le planning en quittant) puis **EOF dans la même milliseconde**. Aucun message d'adieu.
-* **Le port change à chaque lancement d'EW** : 57395 (sessions 1 à 3) → 63612 (sessions 4 à 7) → 56326 (après ce redémarrage). Après toute coupure, **redécouvrir le port à chaque tentative** ; un port mémorisé est faux dès qu'EW a redémarré.
+* **Le port change quand EW est relancé** : observé de façon certaine entre ce test (63612) et la session suivante (56326, EW fermé puis rouvert). Les valeurs 57395 (captures 1 à 3) et 63612 (captures 4 à 7) diffèrent aussi, très probablement pour la même raison (relance d'EW entre-temps, non consignée). Ce n'est **pas** un réglage de l'utilisateur ni de notre script : le port vient de la réponse mDNS d'EW, comme dans la V1. Conséquence : ne jamais le mémoriser, le **redécouvrir à chaque tentative**.
 
 ### Aucune diapo en direct (test 3, début de session, EW venant d'être ouvert)
 * `status` avec **`pres_rowid = "0"`, `slide_rowid` négatif (`-100049`), `imagehash = ""`** ; `GetLiveData` → `LiveData` de **40 octets seulement** (en-tête, `pres_len = 0`, aucune diapo). Notre `getSlideInfo` du titre (`slide_rowid 0`, `pres_rowid 0`) **n'a jamais reçu de réponse** : ne pas attendre le titre.
@@ -193,6 +193,6 @@ Sources : `tests/fixtures/ew_session_coupure_wifi_anonymisee.jsonl`, `ew_session
 * L'`uid` de la V1, non appairé à ce moment-là, reçoit `notPaired` à 13 ms puis **rien**. La connexion reste ouverte **au moins 40 s** (13 heartbeats envoyés sans réponse ni fermeture). Pas de délai d'expiration observé ; limite supérieure inconnue. Conforme à ce qu'on attend d'un appairage révoqué (§9) : après révocation, la reconnexion donne `notPaired`.
 
 ### Conséquences pour le client
-1. Reconnexion : `découverte du port → connexion → connect`, **à chaque tentative**, avec attente progressive (1 s → 10 s) ; ne jamais réutiliser un port d'une session précédente.
+1. Reconnexion : `découverte du port → connexion → connect`, **à chaque tentative** ; ne jamais réutiliser un port d'une session précédente. Première nouvelle tentative **immédiate**, puis attente progressive (0,5 s → 10 s) pour que les micro-coupures se rétablissent en moins de 2 s (voir `spec/technique.md`).
 2. Un `notPaired` ne doit pas déclencher de nouvelle tentative : rester connecté et envoyer les heartbeats (§8).
 3. L'application ne lit que le texte des diapos : **ne pas demander le titre (`slide_rowid 0`)**, cela évite un aller-retour qui peut rester sans réponse. Demander d'abord la diapo courante, puis les autres pour que la navigation soit instantanée.

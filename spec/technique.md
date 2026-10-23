@@ -102,8 +102,9 @@ Contexte : EW sur Windows avec **Bonjour** (obligatoire pour la télécommande),
 5. **Validé (capture du 2026-10-23)** : la requête mDNS *unicast* vers `<nom-du-pc>.local:5353` fonctionne depuis le Mac vers le PC Windows, le nom `.local` se résout, et le port TCP est dynamique. Reste à valider : l'exploration en *multicast* (liste des PC EW) et le comportement DHCP (changement d'IP).
 
 ### Reconnexion et détection de coupure (établies sur captures réelles)
-* À chaque tentative : **découverte du port**, puis connexion, puis `connect`. Le port change à chaque lancement d'EW (3 valeurs en 3 lancements).
-* Fermeture observée dans tous les cas (Wi‑Fi local coupé, EW fermé, appairage révoqué) : **EOF** sur la lecture. Attente progressive 1 s → 10 s entre tentatives ; état « Perdu (nouvel essai dans N s) » ; la sortie passe à `visible = false` dès la perte pour ne pas laisser un texte périmé dans OBS.
+* À chaque tentative : **découverte du port**, puis connexion, puis `connect`. Le port est attribué par EW (3 valeurs différentes observées, changement certain après fermeture puis réouverture d'EW) : on le découvre par mDNS, il n'est jamais saisi ni mémorisé.
+* Fermeture observée dans tous les cas (Wi‑Fi local coupé, EW fermé, appairage révoqué) : **EOF** sur la lecture. Première nouvelle tentative **immédiate**, puis attente progressive 0,5 s → 10 s ; état « Perdu (nouvel essai dans N s) ».
+* **Délai de grâce de 2 s** (décision du mainteneur) : à la perte de connexion le dernier état reste affiché ; la sortie ne passe à `visible = false` que si la connexion n'est pas rétablie au bout de **2 s** (paramètre `lost_grace_seconds`). Une micro-coupure rétablie plus vite ne fait donc pas clignoter le texte. À la reconnexion, EW envoie immédiatement un `status` (≈ 10 ms après `connect`, ≈ 0,1 s avec le texte) : l'état est recalculé et diffusé seulement s'il a changé. Les 2 s s'appliquent aussi à la fermeture d'EW et à la révocation de l'appairage ; avant toute connexion réussie, la sortie reste à `visible = false`.
 * **Coupure silencieuse** (aucun EOF) : non observée. EW pouvant se taire des minutes, on ne peut pas utiliser l'absence de messages. Prévoir : TCP keepalive (`SO_KEEPALIVE`, délais courts) et échec d'écriture des heartbeats ; à tester en débranchant le PC EW.
 * Les heartbeats d'EW vers le client existent (une fois vu) : les ignorer.
 

@@ -43,7 +43,7 @@ URL à saisir dans OBS : `http://localhost:<port>/` (application sur le Mac d'OB
 
 * À chaque **nouvelle connexion**, le serveur envoie immédiatement l'état courant.
 * Le navigateur vide l'affichage s'il perd la connexion et se reconnecte automatiquement (délai croissant plafonné).
-* `text` vide (diapo vide, ou `visible = false`) : la page masque la zone de texte. `visible = false` est aussi envoyé quand **rien n'est en direct** dans EW et quand la connexion à EW est **perdue**.
+* `text` vide (diapo vide, ou `visible = false`) : la page masque la zone de texte. `visible = false` est aussi envoyé quand **rien n'est en direct** dans EW et quand la connexion à EW est **perdue depuis plus de 2 s** (délai de grâce : les micro-coupures ne font pas clignoter le texte).
 * Aucun message navigateur → serveur.
 
 *Existant à remplacer :* v2 utilise `socket.io` (événement `data` avec le texte brut seul, sans notion de `visible`).
@@ -82,6 +82,7 @@ Emplacement : dossier de configuration utilisateur de l'OS (voir `spec/technique
   "web_bind": "127.0.0.1",
   "client_id": "<uuid généré au premier lancement, conservé : c'est l'identité appairée dans EW>",
   "device_name": "EasyWorship vers OBS",
+  "lost_grace_seconds": 2,
   "autostart": false
 }
 ```
