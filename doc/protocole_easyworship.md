@@ -248,7 +248,8 @@ Sources : `tests/fixtures/ew_session_emojis_relance_anonymisee.jsonl` et `ew_ses
 * Heartbeat d'EW : 3ᵉ observation, **≈ 2,3 s après `paired`**, toujours lorsque rien n'était en direct à la connexion et jamais lorsqu'une diapo l'était déjà (hypothèse, sans conséquence : ignorer ces heartbeats).
 
 ### Médias (capture « médias »)
-* Une diapo **vidéo ou image** a `content = ""`, qu'elle soit une diapo entière ou intégrée dans une diapo. Quatre cas capturés : vidéo en diapo entière, vidéo intégrée dans une diapo, image en diapo entière, image intégrée dans une diapo.
+* Les quatre diapos de test (vidéo en diapo entière, vidéo intégrée dans une diapo, image en diapo entière, image intégrée dans une diapo) **ne contenaient que le média** : leur `content` est vide. Ce n'est pas une règle sur les médias : le `content` reflète uniquement le **texte** de la diapo.
+* **Une diapo peut mêler média et texte** (information du mainteneur) : par exemple la diapo d'accueil « Bienvenue », qui contient un compte à rebours de 5 minutes sous forme de vidéo. Son texte est bien transmis dans `content` (voir la diapo d'accueil des captures du §7, texte sur deux lignes) ; la vidéo n'apparaît dans aucun champ.
 * Une diapo-média entière porte le **nom du média dans `title`** (étiquette colorée, `label_bkcolor 12014644`) ; intégrée dans une diapo, `title` reste vide.
-* Aucun message propre à la lecture vidéo (début, fin, position) n'a été observé : seulement un `status` par diapo, avec un `imagehash` distinct par média.
-* ⇒ Média en direct = `visible = true`, `text = ""`. Ne pas afficher le nom du média.
+* Aucun message propre à la lecture vidéo (début, fin, position, compte à rebours) n'a été observé : seulement un `status` par diapo, avec un `imagehash` distinct par média. **Le compte à rebours n'est donc pas transmis** : seul le texte statique l'est.
+* ⇒ Le texte de sortie est **toujours `content`**, que la diapo contienne un média ou non (vide si la diapo n'a pas de texte). Ne pas afficher le nom du média (`title`).

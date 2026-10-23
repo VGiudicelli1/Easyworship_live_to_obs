@@ -119,7 +119,7 @@ Un seul message JSON : `{"visible": bool, "text": str}`. Détail dans `spec/inte
 3. Un texte vide est un état valide (diapo vide ou sans texte). **Rien en direct** (`imagehash` vide, ou `slide_rowid` absent du dernier `LiveData`) ⇒ `visible = false`, texte vide.
 4. Nouveau `liverev` ⇒ **vider le cache des diapos** puis tout recharger (`GetLiveData`, `getSlideInfo`) ; les `slide_rowid` des chants (`pres_rowid = "0"`, identifiants négatifs) ne sont valables que pour un `liverev`. En attendant les `slideInfo` manquants, ne pas diffuser de texte périmé. Ne pas demander le titre (`slide_rowid 0`). Tout demander d'un coup (150 diapos en 0,2 s, EW répond dans son ordre).
 5. Ne dépendre ni de `imagehash`, ni de `rectype`, ni de `slide_no`/`pres_no`.
-6. Média (image ou vidéo) en direct ⇒ texte vide (`visible = true`). `liverev "0"` / `imagehash` vide ⇒ EW pas prêt ou rien en direct. Aucune mise en forme n'est transmise : texte brut. UTF-8 décodé avec remplacement (EW peut envoyer un `U+FFFD`).
+6. Le texte est toujours `content` : une diapo avec média **et** texte (ex. accueil avec compte à rebours vidéo) diffuse son texte ; une diapo sans texte (média seul) donne un texte vide (`visible = true`). Ni le média, ni son nom (`title`), ni un compte à rebours ne sont transmis. `liverev "0"` / `imagehash` vide ⇒ EW pas prêt ou rien en direct. Aucune mise en forme n'est transmise : texte brut. UTF-8 décodé avec remplacement (EW peut envoyer un `U+FFFD`).
 
 ## 4. Exigences non fonctionnelles
 * Latence diapo → OBS < 1 s.
