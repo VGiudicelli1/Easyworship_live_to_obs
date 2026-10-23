@@ -24,7 +24,7 @@ Chaque étape est livrable séparément et se termine par une application qui fo
 **Réponses du mainteneur (2e échange)** : multiplateforme Mac/Windows/Linux (usage Mac, Windows envisagé en démarrage auto sur le PC d'EW) ; OBS sur Mac, EW sur Windows, applications sur le Mac ; EW 7 ; export fichier / crédits / filtre probablement abandonnés ; capture de trames à faire dès l'accès à EW. Prérequis : Bonjour sur le PC EW.
 
 Restent ouvertes :
-1. ~~Capture de trames réelles~~ : **3 captures faites le 2026-10-23** (voir `doc/protocole_easyworship.md` §7 à §9, fixtures `tests/fixtures/`) : lecture des diapos, appairage, mode contrôle, révocation. Reste une 4e capture pour : diapo **sans texte** (images seules), coupure réseau / redémarrage d'EW / reconnexion après révocation (`--reconnect`), diapo modifiée en direct, attente prolongée sans réponse à la demande d'appairage, logo/noir/clear (vus dans la 1re capture).
+1. ~~Capture de trames réelles~~ : **5 captures faites le 2026-10-23** (voir `doc/protocole_easyworship.md` §7 à §10, fixtures `tests/fixtures/`) : lecture des diapos, appairage, mode contrôle, révocation, diapos vides, étiquettes, édition en direct, logo/noir/clear. Restent à capturer : reconnexion après coupure réseau / redémarrage d'EW / révocation (`--reconnect`), attente prolongée sans réponse à la demande d'appairage.
 2. ~~Version exacte d'EW 7~~ : **7.4.1.9**.
 3. Démarrage automatique : à la demande, étape 7bis (après la v1 de l'installeur).
 4. Rendu souhaité dans OBS (fond semi-transparent actuel, police, position) : personnalisable par paramètres d'URL ?

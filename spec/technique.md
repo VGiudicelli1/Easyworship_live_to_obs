@@ -28,6 +28,7 @@ Détails du protocole : `doc/protocole_easyworship.md`.
 ### Protocole EW (`src_v1/`)
 * `Params.load/save` vides ; hôte `192.168.1.213` et `client_id` figés en dur.
 * Résolution : `socket.getaddrinfo(host, 5353)` dans le constructeur → **échoue si l'hôte est un nom non résolu** (exception non gérée à la construction).
+* **Déclenchement sur `imagehash` et `if currentSlide.content:`** : une diapo vide, ou dont l'image est identique à la précédente, n'est jamais affichée (10 cas sur 11 dans la capture « diapos vides », `doc/protocole_easyworship.md` §10). À remplacer par le recalcul de l'état à chaque `status`.
 * `Slide.isNull()` est **inversée** (renvoie `True` quand le rowid est valide) ; `__str__` affiche « Slide NULL » pour une diapo valide ; `__bool__` s'appuie dessus. Fonctionne par accident.
 * `EventsManager`/`EW_API` : `self.events = EventsManager()` redondant ; `raise 'existing event'` (lève un `str`, invalide en Python 3).
 * `fireEvent('disconnected')` n'est émis qu'à la fin du thread d'envoi ; **aucune reconnexion** : la boucle `connect()` + `sleep(3)` du `__main__` est un test.
@@ -102,6 +103,13 @@ Contexte : EW sur Windows avec **Bonjour** (obligatoire pour la télécommande),
 
 ### Contrat WebSocket app → navigateur
 Un seul message JSON : `{"visible": bool, "text": str}`. Détail dans `spec/interfaces.md`.
+
+### Règle d'émission de l'état (établie sur captures réelles)
+1. L'état de sortie est `(visible, text)` avec `visible = not (logo or black or clear)` et `text` = contenu de la diapo `(pres_rowid, slide_rowid)` du dernier `status`, normalisé `\r\n` → `\n`.
+2. Il est **recalculé** à chaque `status` et à chaque `slideInfo`/`LiveData` reçu, puis diffusé **seulement s'il a changé** (les `status` répétés, ceux où seuls `permissions`/`schedulerev` bougent, et le double `status` d'un changement de diapo ne produisent rien).
+3. Un texte vide est un état valide (diapo vide ou sans texte).
+4. Nouveau `liverev` ⇒ tout recharger (`GetLiveData`, `getSlideInfo`) ; en attendant les `slideInfo` manquants, ne pas diffuser de texte périmé.
+5. Ne dépendre ni de `imagehash`, ni de `rectype`, ni de `slide_no`/`pres_no`.
 
 ## 4. Exigences non fonctionnelles
 * Latence diapo → OBS < 1 s.

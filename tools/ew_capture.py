@@ -512,6 +512,15 @@ def analyze(path, out=print):
                 latencies.append(r["t"] - last_status_t)
 
     events = [r for r in load(path) if r.get("dir") == "info" and r.get("msg", {}).get("event")]
+    stat = [r for r in recs if r["dir"] == "recv" and isinstance(r.get("msg"), dict) and r["msg"].get("action") == "status"]
+    same_hash, never_followed = 0, 0
+    for i in range(1, len(stat)):
+        a, b = stat[i - 1]["msg"], stat[i]["msg"]
+        if (a["pres_rowid"], a["slide_rowid"]) != (b["pres_rowid"], b["slide_rowid"]) and a["imagehash"] == b["imagehash"]:
+            same_hash += 1
+            nxt = stat[i + 1] if i + 1 < len(stat) else None
+            if nxt is None or nxt["t"] - stat[i]["t"] > 0.5 or nxt["msg"]["imagehash"] == b["imagehash"]:
+                never_followed += 1
     out("== %s : %d messages ==" % (path, len(recs)))
     for r in events:
         out("   t=%-7s événement : %s %s" % (r["t"], r["msg"]["event"], {k: v for k, v in r["msg"].items() if k in ("reason", "error", "port")} or ""))
@@ -528,6 +537,10 @@ def analyze(path, out=print):
         for k, v in sorted(status_vals.items()):
             sample = sorted(v)[:6]
             out("  %-12s %d valeur(s) %s%s" % (k, len(v), sample, " ..." if len(v) > 6 else ""))
+        out("")
+    if same_hash:
+        out("Changements de diapo avec imagehash inchangé : %d (dont %d sans nouveau status avec un autre imagehash)" % (same_hash, never_followed))
+        out("  -> imagehash ne suffit pas à détecter un changement de diapo.")
         out("")
     if latencies:
         out("Délai status -> slideInfo : médiane %.0f ms, max %.0f ms" % (1000 * sorted(latencies)[len(latencies) // 2], 1000 * max(latencies)))

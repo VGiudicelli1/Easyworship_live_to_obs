@@ -43,6 +43,7 @@ URL à saisir dans OBS : `http://localhost:<port>/` (application sur le Mac d'OB
 
 * À chaque **nouvelle connexion**, le serveur envoie immédiatement l'état courant.
 * Le navigateur vide l'affichage s'il perd la connexion et se reconnecte automatiquement (délai croissant plafonné).
+* `text` vide (diapo vide, ou `visible = false`) : la page masque la zone de texte.
 * Aucun message navigateur → serveur.
 
 *Existant à remplacer :* v2 utilise `socket.io` (événement `data` avec le texte brut seul, sans notion de `visible`).

@@ -85,7 +85,7 @@ Source : `tests/fixtures/ew_session_reelle_anonymisee.jsonl` (60 s, EW 7 sous Wi
 1. **Messages `paired` / `notPaired`** (`{"action":"paired","requestrev":"0"}`) : première réponse à `connect`. `paired` = télécommande connue ; `notPaired` = inconnue, voir §8 (appairage validé en pratique le 2026-10-23).
 2. **Types** : dans `status` et `slideInfo`, `pres_rowid`, `slide_rowid`, `pres_no`, `slide_no`, `schedulerev`, `liverev`, `revision`, `requestrev`, `label_*` sont des **chaînes** ; `logo/black/clear` sont des booléens JSON ; `rectype` et `permissions` des entiers. Les clés du binaire `LiveData` sont des entiers : **comparer en normalisant le type** (le script d'analyse avait ce bug).
 3. **Un changement de diapo produit souvent deux `status`**, à 5–150 ms d'écart : le premier porte le nouveau `slide_rowid` avec l'**ancien** `imagehash`, le second met à jour l'`imagehash` (9 changements sur 23). Se baser sur `imagehash` (logique V1) retarde donc l'affichage, et ne distingue pas deux diapos d'image identique. **Clé recommandée : `(pres_rowid, slide_rowid)` + `logo/black/clear`**, avec un anti-rebond de ~100 ms.
-4. `rectype` vaut 0 sur le `status` qui suit un changement de présentation (et à la connexion), 1 ensuite ; un `status` « 0 » est parfois suivi immédiatement du même en « 1 » (clear). *Hypothèse non confirmée* : 0 = présentation, 1 = diapo.
+4. `rectype` vaut 0 sur le `status` qui suit un changement de présentation (et à la connexion), 1 ensuite ; un `status` « 0 » est parfois suivi immédiatement du même en « 1 » (clear). *Hypothèse **infirmée** par le §10* : `rectype` 0 apparaît aussi sans changement de présentation ; ne pas s'en servir.
 5. Champs `slideInfo` complets : `rectype`, `pres_rowid`, `slide_rowid`, `title`, `reference_num`, `content`, `notes`, `revision`, `label_bkcolor`, `label_txcolor`. Pour `slide_rowid = "0"` : `title` = nom de la présentation, `content` vide.
 6. Pour une diapo, `title` est **vide ou une étiquette de section** (`Verse 1`…). Les diapos « crédits » de ew2vm ne sont pas rencontrées : règle sans objet ici (confirme son retrait).
 7. Champs du header `LiveData` : `unknown0` vaut toujours 1 ; `unknown5` varie, proche de `liverev` (probablement une révision) ; `title_revision` et `revision` ressemblent à des horodatages/compteurs 64 bits. Non utiles pour l'application.
@@ -132,3 +132,34 @@ Conséquences pour l'application :
 * **Révocation = fermeture TCP silencieuse**, indiscernable à ce niveau d'une coupure réseau ou d'un redémarrage d'EW. Le client doit donc se reconnecter automatiquement (attente progressive, 1 s → 10 s) ; après une révocation il recevra vraisemblablement `notPaired` (**non capturé** : le script s'arrêtait à la fermeture ; utiliser `--reconnect`) et passera en état « en attente d'acceptation ». Message à l'opérateur proposé : « Connexion fermée par EasyWorship (appairage révoqué ou EW fermé) ».
 * Le refus d'une demande d'appairage **n'existe pas** : EW propose seulement d'accepter ou de laisser en attente (information du mainteneur). Il n'y a donc pas de message de refus à gérer ; en revanche l'**attente peut être indéfinie** : pas de délai d'expiration côté application, heartbeats maintenus. Combien de temps EW garde la connexion `notPaired` ouverte sans réponse : **non testé**.
 * Texte vide : le mainteneur pense qu'**une diapo vide n'existe pas** dans EW ; une diapo **sans texte** (images seules, etc.) est possible mais **pas encore capturée** — à confirmer ce que renvoie `slideInfo.content` (chaîne vide attendue).
+
+## 10. Diapos vides, étiquettes, édition en direct (4e et 5e captures, EW 7.4.1.9)
+
+Sources : `tests/fixtures/ew_session_diapos_vides_anonymisee.jsonl` (40 s) et `tests/fixtures/ew_session_edition_live_anonymisee.jsonl` (40 s). Présentations de test créées par le mainteneur (la présentation « 443 » est conservée telle quelle dans les fixtures car ses textes décrivent les cas testés ; les autres sont anonymisées).
+
+### Port
+Le port de la télécommande valait **63612** dans ces deux captures contre 57395 plus tôt : il change (probablement au redémarrage d'EW). **Ne jamais mémoriser le port**, le redécouvrir à chaque connexion.
+
+### Diapos vides ou sans texte
+* **Elles existent** : `slideInfo.content = ""`, `title = ""`, tous les autres champs normaux, et un `status` habituel à l'affichage. Une présentation de 5 diapos vides a été capturée ; la présentation « 443 » contient aussi une diapo vide au milieu.
+* **Toutes les diapos vides partagent la même image** donc le même `imagehash`. Dans la capture « diapos vides » : 11 changements de diapo avec `imagehash` inchangé, dont **10 jamais suivis d'un autre `status`** (dans la 5e capture : 3 changements, tous suivis d'un 2e `status` avec nouvel `imagehash`).
+  → La logique V1 (déclenchement quand `imagehash` change) **n'aurait jamais vu ces 10 changements** : le texte précédent serait resté affiché. La V1 testait en plus `if currentSlide.content:` (diapo vide ignorée). Confirmation expérimentale de la règle du §7 : l'état se recalcule à **chaque** `status`.
+* Comportement attendu côté sortie : diapo vide ⇒ `text = ""` (affichage masqué), pas de maintien du texte précédent.
+
+### Étiquettes (`title` des diapos)
+* `title` d'une diapo = **nom de l'étiquette** (« Label 1 », « Verse 2 »…), vide si la diapo n'en a pas ; `label_bkcolor` / `label_txcolor` valent alors `12014644` / `12040119` pour une diapo étiquetée et `536870911` / `1250067` sinon (`536870911 = 0x1FFFFFFF`, « aucune couleur »).
+* L'appartenance à un groupe n'est **pas** encodée : une diapo sans étiquette fait partie du groupe de la diapo étiquetée qui la précède (d'après le mainteneur), à déduire de l'ordre de `LiveData`. Deux étiquettes de même nom non adjacentes forment deux groupes distincts. Une diapo vide n'appartient à aucun groupe. **Inutile pour l'application** (texte seul) ; documenté pour mémoire.
+* L'ordre des `slides` dans `LiveData` est l'ordre de la présentation (la nouvelle diapo ajoutée en direct apparaît en 4e position).
+* Le titre de la présentation (`slide_rowid = "0"`) ne peut pas être vide (EW refuse : « diapo sans titre impossible », intitulé de la présentation de test).
+
+### Édition en direct (capture « édition en direct »)
+| t (s) | Événement | Détail |
+|---|---|---|
+| 10,5 | `status` sans changement de diapo ni d'`imagehash` | seul **`schedulerev`** change (modification du planning) |
+| 15,6 | `status` `rectype 0` avec **nouveau `liverev`** (puis, 5 ms plus tard, un 2e `status` avec nouvel `imagehash`) | `GetLiveData` → `LiveData` de **8 diapos** (7 avant) : la diapo ajoutée (`8894`, « contenu 3 : slide ajouté en live ») est insérée à la 4e place ; les `revision` de 2 diapos modifiées ont changé, les autres non |
+| 36,9 | `status` : seul `schedulerev` change | pas de changement de `liverev` : rien à recharger |
+
+* **Un changement de contenu en direct se signale par un nouveau `liverev`** (≈ 5 s après la modification dans cette capture), pas par un événement par diapo. Il faut alors tout redemander (`GetLiveData` + `getSlideInfo`), comme pour un changement de présentation. Optimisation possible, non nécessaire : ne redemander que les diapos dont la `revision` du `LiveData` a changé (2 sur 8 ici).
+* Après rechargement la diapo en direct garde le **même** `(pres_rowid, slide_rowid)` mais son texte peut avoir changé : la sortie doit être **recalculée et diffusée si le texte a changé**. Dédoublonner sur l'état de sortie `(visible, texte)` et non sur la clé de diapo.
+* `schedulerev` (planning EW) change sans effet sur le direct : **à ignorer**, comme `permissions`. Un `status` reçu deux fois de suite avec la même diapo (cas du 10,5 s) ne doit rien déclencher.
+* Un `status` peut précéder la fin du rechargement : tant que les `slideInfo` de la diapo courante manquent, ne pas diffuser de texte périmé *ni* vide ; attendre (≈ 0,1–0,2 s) ou conserver l'ancien état jusqu'à réception.
