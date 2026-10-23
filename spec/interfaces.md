@@ -28,11 +28,27 @@ class EwClient:
 ### HTTP
 | Route | Rôle |
 |---|---|
-| `GET /` | Page d'affichage (`public/index.html`), à mettre dans une *Source navigateur* OBS |
+| `GET /` | Page d'affichage (`public/index.html`), à mettre dans une *Source navigateur* OBS (réponses avec `Cache-Control: no-store`) |
 | `GET /index.js`, `/index.css` | Ressources statiques embarquées (aucun CDN) |
-| `GET /ws` | Mise à niveau WebSocket |
+| `GET /ws` | Mise à niveau WebSocket (ping serveur toutes les 20 s) |
+| `GET /favicon.ico` | `204` (pas d'icône) ; toute autre route : `404` |
 
-URL à saisir dans OBS : `http://localhost:<port>/` (application sur le Mac d'OBS) ou `http://<nom-du-pc-ew>:<port>/` (application sur le PC EW, écoute réseau activée) (par défaut port 8000), affichée dans l'UI avec bouton « copier ». Paramètres de requête envisagés pour personnaliser sans reconstruire : `?bg=rgba(0,0,0,.6)&color=white&padding=20`.
+URL à saisir dans OBS : `http://localhost:<port>/` (application sur le Mac d'OBS) ou `http://<nom-du-pc-ew>:<port>/` (application sur le PC EW, écoute réseau activée) (par défaut port 8000), affichée dans l'UI avec bouton « copier ». 
+
+**Réglages par l'URL** (implémentés, valeurs invalides ignorées ; `#` s'écrit `%23`, ou omis : `bg=003366`) :
+
+| Paramètre | Effet | Défaut |
+|---|---|---|
+| `bg` | couleur de fond du cadre de texte (`transparent` pour aucun) | `rgba(127,127,127,.7)` |
+| `color` | couleur du texte | `#fff` |
+| `padding` / `margin` / `radius` | marge intérieure, marge autour de la zone, arrondi (px) | 20 / 20 / 10 |
+| `align` | `left`, `center`, `right` (position et alignement du texte) | `center` |
+| `valign` | `top`, `middle`, `bottom` (ex. bandeau en bas : `?valign=bottom`) | `middle` |
+| `font` | famille de police (lettres, chiffres, espaces, virgules, guillemets) | police système + emojis |
+| `max` | taille de police maximale (px) | taille de la zone |
+| `demo` | `?demo=1` ou `?demo=Mon%20texte` : aperçu du style sans application (aucun WebSocket) | — |
+
+Le texte est affiché en **texte brut** (`textContent`, jamais de HTML), à la plus grande taille de police qui tient dans la zone (8 px minimum ; en dessous le texte est coupé mais ne sort jamais de l'écran), recalculée à chaque changement et à chaque redimensionnement. Le fond de la page reste transparent. Si le WebSocket est perdu, la page masque le texte et se reconnecte seule (délai 0,5 s doublé jusqu'à 5 s).
 
 ### WebSocket `/ws`
 * Serveur → navigateur, un seul type de message JSON :

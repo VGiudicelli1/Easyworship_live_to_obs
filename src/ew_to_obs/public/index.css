@@ -1,0 +1,49 @@
+/* Réglages modifiables par l'URL (voir index.js) : ?bg=&color=&padding=&margin=&radius=&font=&align=&valign=&max= */
+:root {
+  --bg: rgba(127, 127, 127, 0.7);
+  --color: #ffffff;
+  --padding: 20px;
+  --margin: 20px;
+  --radius: 10px;
+  --font: system-ui, -apple-system, "Segoe UI", "Apple Color Emoji", "Segoe UI Emoji",
+    "Noto Color Emoji", sans-serif;
+  --talign: center;
+  --halign: center;
+  --valign: center;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: transparent; /* OBS : la source navigateur garde la transparence */
+}
+
+#stage {
+  position: fixed;
+  inset: var(--margin);
+  display: flex;
+  justify-content: var(--halign);
+  align-items: var(--valign);
+}
+
+#text {
+  box-sizing: border-box;
+  max-width: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  padding: var(--padding);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--color);
+  font-family: var(--font);
+  line-height: 1.2;
+  text-align: var(--talign);
+  white-space: pre-wrap; /* respecte les retours à la ligne et les espaces d'EasyWorship */
+  overflow-wrap: anywhere;
+}
+
+#text[hidden] {
+  display: none;
+}

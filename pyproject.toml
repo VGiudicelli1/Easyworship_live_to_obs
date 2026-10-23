@@ -9,13 +9,17 @@ description = "Affiche dans OBS le texte de la diapo en direct d'EasyWorship"
 readme = "README.md"
 license = { file = "LICENSE.txt" }
 requires-python = ">=3.10"
-dependencies = []
+dependencies = ["aiohttp>=3.9"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.5"]
+browser = ["playwright>=1.49"]  # tests de la page dans Chromium
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+ew_to_obs = ["public/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -24,15 +24,18 @@ Objectif : **une seule application**, simple, qui se souvient du PC EasyWorship,
 
 ## Développement
 
-Étape 1 du [plan](doc/plan_de_migration.md) : le **client EasyWorship** (`src/ew_to_obs/`) est écrit et testé ; le serveur web, la configuration, l'interface et le packaging restent à faire.
+Étapes 1 et 2 du [plan](doc/plan_de_migration.md) : le **client EasyWorship** et le **serveur web avec la page pour OBS** (`src/ew_to_obs/`) sont écrits et testés ; la configuration, l'interface et le packaging restent à faire.
 
 ```
 python -m venv venv && source venv/bin/activate     # Windows : venv\Scripts\activate
 pip install -e ".[dev]"
-python -m pytest            # 92 tests : décodeur, logique rejouée sur 13 captures réelles, client sur faux EW
+python -m pytest            # 104 tests (+ 16 dans un vrai navigateur si Playwright est installé)
 ruff check src tests && ruff format --check src tests
-python -m ew_to_obs --host NOM_OU_IP_DU_PC_EW    # affiche une ligne JSON à chaque changement de diapo
+python -m ew_to_obs --host NOM_OU_IP_DU_PC_EW            # affiche une ligne JSON à chaque changement de diapo
+python -m ew_to_obs --host NOM_OU_IP_DU_PC_EW --serve    # + sert la page pour OBS sur http://localhost:8000/
 ```
+
+Dans OBS : *Sources → + → Navigateur*, coller `http://localhost:8000/`, largeur et hauteur de la scène (ex. 1920 × 1080). Le fond reste transparent. Réglages par l'URL (`?valign=bottom&bg=rgba(0,0,0,.65)&color=white…`) : voir [spec/interfaces.md](spec/interfaces.md) ; `?demo=1` pour régler le style sans application. Tests dans un navigateur : `pip install -e ".[dev,browser]" && playwright install chromium`.
 
 | Module | Rôle |
 |---|---|
@@ -40,6 +43,7 @@ python -m ew_to_obs --host NOM_OU_IP_DU_PC_EW    # affiche une ligne JSON à cha
 | `live.py` | logique pure : messages d'EW → état `(visible, texte)` |
 | `discovery.py` | résolution IPv4, port par mDNS (parallèle), connexion TCP |
 | `client.py` | boucle asynchrone : appairage, reconnexion, délai de grâce de 2 s, heartbeats, keepalive |
+| `web.py` + `public/` | serveur `aiohttp` (page + WebSocket) ; page sans CDN, texte brut, taille de police ajustée à la zone |
 
 ## Documentation (branche `claude/analyse_repo`)
 

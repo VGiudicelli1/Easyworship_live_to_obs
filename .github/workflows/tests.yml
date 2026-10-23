@@ -21,3 +21,16 @@ jobs:
       - run: ruff check src tests
       - run: ruff format --check src tests
       - run: python -m pytest -q
+
+  # La page d'affichage dans un vrai navigateur (Chromium). Ignorée dans la matrice ci-dessus,
+  # où Playwright n'est pas installé.
+  page:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev,browser]"
+      - run: playwright install --with-deps chromium
+      - run: python -m pytest -q tests/test_page.py

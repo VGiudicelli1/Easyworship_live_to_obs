@@ -6,7 +6,7 @@ Chaque étape est livrable séparément et se termine par une application qui fo
 |---|---|---|---|
 | 0 | Branche d'intégration depuis `main`; importer `dev` (EW) et la page `public/` de `version2`. Nettoyer le `.gitignore` | Arborescence cible, CI verte (lint + tests vides) | `dev`, `version2` |
 | 1 | ✅ *fait sur `claude/ew_client`* — `ew_client` asynchrone + `LiveState`; corriger `Slide.isNull`, diapo vide, reconnexion | Tests `pytest` sur trames rejouées ; CLI `--headless` qui imprime les changements de diapo | `ew_api.py`, `storage.py` |
-| 2 | `web_server` aiohttp : HTTP statique + WebSocket + état courant à la connexion ; page sans CDN | Test automatique : un client WS reçoit l'état ; page vue dans OBS | `output_web.py`, `public/` |
+| 2 | ✅ *fait sur `claude/ew_client`* — `web_server` aiohttp : HTTP statique + WebSocket + état courant à la connexion ; page sans CDN | Test automatique : un client WS reçoit l'état ; page vue dans OBS | `output_web.py`, `public/` |
 | 3 | `config` (JSON) + `client_id` généré + hôte mémorisé | Redémarrage = même hôte, aucune saisie | nouveau |
 | 4 | `discovery` : résolution du nom à chaque connexion + recherche mDNS | Changement d'IP DHCP sans intervention (test sur site) | nouveau |
 | 5 | `ui` Tkinter minimale (voir `spec/interfaces.md`) | Opérateur non technique réussit sans aide | `interface.py` v1 |

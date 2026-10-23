@@ -17,7 +17,7 @@ Documentation, commentaires et messages de commit en **français** ; identifiant
 * EW exige **Bonjour** sur son PC pour activer la télécommande (protocole exploité) ; ne pas le contourner.
 * L'application est en **lecture seule** vis-à-vis d'EasyWorship.
 * Le protocole EW est non documenté : toute modification de `ew_client` doit être couverte par un test sur trames rejouées. Ne pas inventer de messages.
-* Aucune dépendance réseau externe à l'exécution (pas de CDN).
+* Aucune dépendance réseau externe à l'exécution (pas de CDN). La page affiche le texte en **texte brut** (`textContent`, jamais `innerHTML`) ; serveur web sur `127.0.0.1` par défaut. Tout changement de `public/` doit rester couvert par `tests/test_page.py` (Chromium via Playwright, ignoré s'il est absent).
 * Pas d'écriture dans le dossier d'installation ; config et logs dans le dossier utilisateur de l'OS.
 * Pas d'IP en dur ; `client_id` (`uid`) généré **une fois par installation** et conservé dans la config : EW répond `notPaired` à un `uid` neuf et attend l'acceptation de l'opérateur sur le PC EW (`doc/protocole_easyworship.md` §8). L'appairage est durable ; sa révocation dans EW ferme la connexion TCP sans message (§9) → reconnexion automatique. Le champ `permissions` (mode contrôle d'EW) est ignoré. Version d'EW testée : 7.4.1.9.
 * Fixture de référence : `tests/fixtures/ew_session_reelle_anonymisee.jsonl` (capture réelle anonymisée) ; constats dans `doc/protocole_easyworship.md` §7. Diapo en direct = `(pres_rowid, slide_rowid)` du dernier `status`, **jamais `imagehash`** (diapos vides identiques). Règle d'émission : recalculer `(visible, texte)` à chaque message et ne diffuser que s'il change ; texte vide valide ; nouveau `liverev` ⇒ tout recharger ; ignorer `permissions`, `schedulerev`, `rectype` (`spec/technique.md`, `doc/protocole_easyworship.md` §10). Les identifiants arrivent en **chaînes**. Le port d'EW change à chaque lancement d'EW : redécouvrir à **chaque** tentative de connexion. Cache des diapos vidé à chaque nouveau `liverev` (identifiants des chants négatifs et éphémères). Rien en direct = `imagehash` vide. Perte de connexion > 2 s (`lost_grace_seconds`) ⇒ `visible=false` ; en dessous, garder le texte (pas de clignotement, §11 et `spec/technique.md`). Aucun champ « port EW » dans l'interface. Nom résolu en IPv4 seule + `last_ip` mémorisée (§14). Texte = toujours `content` (diapo avec média + texte : le texte est diffusé ; média seul : texte vide ; ni média ni compte à rebours transmis) ; texte brut sans mise en forme ; décoder l'UTF-8 avec remplacement. Réseau : **IPv4 d'abord** (l'IPv6 ne répond jamais côté EW), requêtes mDNS parallèles, délais courts par adresse, jamais cumulés (`doc/protocole_easyworship.md` §12).
@@ -25,8 +25,8 @@ Documentation, commentaires et messages de commit en **français** ; identifiant
 
 ## Commandes
 * Installer : `pip install -e ".[dev]"` · Tests : `python -m pytest` · Lint : `ruff check src tests && ruff format --check src tests`
-* Lancer le client seul : `python -m ew_to_obs --host NOM_OU_IP` (une ligne JSON par changement d'état)
-* Code : `src/ew_to_obs/` (`protocol`, `live`, `discovery`, `client`) ; tests : `tests/` (fixtures réelles anonymisées dans `tests/fixtures/`, faux EW dans `tests/fake_ew.py`). `tools/ew_capture.py` reste un outil autonome (code mDNS volontairement dupliqué).
+* Lancer le client seul : `python -m ew_to_obs --host NOM_OU_IP` (une ligne JSON par changement d'état) ; avec la page pour OBS : ajouter `--serve` (`--web-port`, `--web-bind`)
+* Code : `src/ew_to_obs/` (`protocol`, `live`, `discovery`, `client`, `web`, `public/`) ; tests : `tests/` (fixtures réelles anonymisées dans `tests/fixtures/`, faux EW dans `tests/fake_ew.py`). `tools/ew_capture.py` reste un outil autonome (code mDNS volontairement dupliqué).
 * Build : voir `doc/build_et_installation.md`
 
 ## Questions ouvertes
