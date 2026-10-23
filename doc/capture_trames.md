@@ -33,6 +33,11 @@ Windows : remplacer `python3` par `py`.
 * Résumé affiché à la fin : actions vues, champs, valeurs distinctes de `status`, délais, et **points d'attention** (action inconnue, champ `size` hors liste, binaire incohérent, champs « inconnus » du header non nuls).
 * Le dossier `captures/` est ignoré par Git : les fichiers contiennent le texte des diapos. Pour partager une capture, utiliser `--redact` (le script ne masque que `title`, `content`, `device_name`) et relire le fichier avant publication.
 
+## Réseau : IPv4 d'abord
+Le script interroge **en parallèle** toutes les adresses du PC EW et se connecte en **IPv4 d'abord** (l'IPv6 ne répond jamais côté EW). `--dnspython` force la méthode de la V1 (dnspython). Chaque capture enregistre `discovery_s`, `connect_s` et l'adresse utilisée.
+
+**Couper le Wi‑Fi du Mac pour une durée précise (macOS)** : `networksetup -listallhardwareports` donne l'interface Wi‑Fi (souvent `en0`), puis `networksetup -setairportpower en0 off && sleep 2 && networksetup -setairportpower en0 on` coupe 2 s.
+
 ## Tester coupures et révocation
 Avec `--reconnect`, le script se reconnecte (attente 3 s) quand EW ferme la connexion ou que le réseau coupe, et continue d'écrire dans le même fichier (événements `closed_by_peer`, `retry_wait`, `connected`). À utiliser pour : couper le Wi‑Fi 10 s, quitter puis relancer EW, **révoquer** l'appairage dans EW et regarder si `notPaired` revient.
 

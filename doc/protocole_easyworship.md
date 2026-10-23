@@ -196,3 +196,23 @@ Sources : `tests/fixtures/ew_session_coupure_wifi_anonymisee.jsonl`, `ew_session
 1. Reconnexion : `découverte du port → connexion → connect`, **à chaque tentative** ; ne jamais réutiliser un port d'une session précédente. Première nouvelle tentative **immédiate**, puis attente progressive (0,5 s → 10 s) pour que les micro-coupures se rétablissent en moins de 2 s (voir `spec/technique.md`).
 2. Un `notPaired` ne doit pas déclencher de nouvelle tentative : rester connecté et envoyer les heartbeats (§8).
 3. L'application ne lit que le texte des diapos : **ne pas demander le titre (`slide_rowid 0`)**, cela évite un aller-retour qui peut rester sans réponse. Demander d'abord la diapo courante, puis les autres pour que la navigation soit instantanée.
+
+## 12. Reconnexion réelle et IPv6 (10e capture, `--reconnect`, 274 s)
+
+Source : `tests/fixtures/ew_session_reconnexion_anonymisee.jsonl`. Le fichier ne contient que les trames et les événements du script ; **l'ordre exact de vos manipulations (relance d'EW, révocation, coupure) n'y figure pas**, les interprétations ci-dessous se limitent à ce qui se lit dans les trames.
+
+| t (s) | Événement | Lecture |
+|---|---|---|
+| 0 → 10,8 | `connect` (port 49708) → `notPaired` ; `paired` à 10,8 s | appairage accepté sur EW ; EW n'a rien en direct (`imagehash` vide, `LiveData` de 40 octets) |
+| 17,67 | dernier `status` (seul `schedulerev` change) puis **EOF dans la même milliseconde** | même signature que la fermeture d'EW (§11) |
+| 45,3 | reconnexion automatique, **nouveau port 53964**, `paired` immédiat | l'appairage survit à la relance d'EW |
+| 68,7 | EOF (sans `status` préalable) | fermeture de la connexion |
+| 100,9 | une tentative de découverte échoue (« découverte impossible ») | EW injoignable ou ne répondant plus au mDNS à ce moment |
+| 139,6 | reconnexion automatique, **même port 53964**, `paired` immédiat | EW n'a donc pas été relancé entre-temps ; l'appairage de cet `uid` est toujours valide |
+| 140 → 274 | 45 heartbeats sans incident | |
+
+Constats :
+* **La reconnexion automatique fonctionne** (2 fois sur 2) : découverte du port, `connect`, `paired` en ~10 ms, `status` dans la même milliseconde, données en ~0,1 s.
+* **Pas d'IPv6 côté EW** (observé par le mainteneur : « en IPv6, ça ne marche jamais ; l'IPv4 marche du premier coup ») : une tentative de découverte qui échoue a pris **≈ 29 s** (68,7 s → 100,9 s, moins 3 s d'attente) car la découverte du script interrogeait les adresses **une par une**, 2 essais × 3 s chacune. Idem côté TCP avec `socket.create_connection` de la V1 (7 s par adresse injoignable, sans ordre IPv4/IPv6). Les durées de 27,6 s et 70,9 s entre fermeture et reconnexion contiennent aussi le temps où EW n'était pas disponible : elles ne mesurent pas le délai de reconnexion seul.
+* Correction faite dans `tools/ew_capture.py` : requête mDNS envoyée **en parallèle** à toutes les adresses (la première réponse gagne), **IPv4 d'abord**, connexion TCP à l'IP qui a répondu (sinon IPv4 d'abord) avec 3 s par adresse et 10 s au total. Les fichiers de capture enregistrent désormais `discovery_s`, `connect_s` et `address`, ainsi que les échecs (`discovery_failed`, `connect_failed`) avec leur durée.
+* Règle pour l'application : **IPv4 d'abord, IPv6 en dernier recours seulement** ; ne jamais enchaîner des délais par adresse ; viser une découverte + connexion < 1 s quand EW est là, et un échec franc en < 5 s quand il est absent (pour que la tentative suivante parte vite).
