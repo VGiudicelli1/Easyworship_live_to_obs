@@ -34,6 +34,7 @@ Objectif : **une seule application**, simple, qui se souvient du PC EasyWorship,
 | [doc/branches.md](doc/branches.md) | Analyse de chaque branche |
 | [doc/protocole_easyworship.md](doc/protocole_easyworship.md) | Protocole de télécommande EW tel que le code l'utilise |
 | [doc/build_et_installation.md](doc/build_et_installation.md) | Build, installeur, CI/CD |
+| [doc/capture_trames.md](doc/capture_trames.md) | Capturer les trames EW avec `tools/ew_capture.py` |
 | [doc/plan_de_migration.md](doc/plan_de_migration.md) | Étapes de réalisation |
 
 ## Compatibilités

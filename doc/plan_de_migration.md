@@ -24,7 +24,7 @@ Chaque étape est livrable séparément et se termine par une application qui fo
 **Réponses du mainteneur (2e échange)** : multiplateforme Mac/Windows/Linux (usage Mac, Windows envisagé en démarrage auto sur le PC d'EW) ; OBS sur Mac, EW sur Windows, applications sur le Mac ; EW 7 ; export fichier / crédits / filtre probablement abandonnés ; capture de trames à faire dès l'accès à EW. Prérequis : Bonjour sur le PC EW.
 
 Restent ouvertes :
-1. Capture de trames réelles (bloquant pour les étapes 1 et 4 : on avance avec des trames de ew2vm et on valide ensuite).
+1. Capture de trames réelles, script prêt : `tools/ew_capture.py`, mode d'emploi dans `doc/capture_trames.md` (bloquant pour les étapes 1 et 4 : on avance avec des trames de ew2vm et on valide ensuite).
 2. Version exacte d'EW 7.
 3. Démarrage automatique : à la demande, étape 7bis (après la v1 de l'installeur).
 4. Rendu souhaité dans OBS (fond semi-transparent actuel, police, position) : personnalisable par paramètres d'URL ?
