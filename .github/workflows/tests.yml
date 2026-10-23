@@ -1,18 +1,19 @@
 name: Tests
 
-# Crédits GitHub Actions limités : pas de CI à chaque push de branche.
-# Elle tourne sur les pull requests, sur main et à la demande (onglet Actions > Run workflow),
-# et pas pour les changements de documentation seule.
+# Crédits GitHub Actions limités :
+#  - à chaque push : un seul job rapide sur Ubuntu (lint + tests) ;
+#  - sur les pull requests et à la demande (onglet Actions > Run workflow) : tous les systèmes
+#    et la page dans un vrai navigateur.
+# Pas de CI pour les changements de documentation seule.
 on:
-  pull_request:
+  push:
     paths-ignore:
       - "**.md"
       - "spec/**"
       - "doc/**"
       - "tools/**"
       - "captures/**"
-  push:
-    branches: [main]
+  pull_request:
     paths-ignore:
       - "**.md"
       - "spec/**"
@@ -27,14 +28,31 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
+  # Chaque push.
+  quick:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - run: pip install -e ".[dev]"
+      - run: ruff check src tests
+      - run: ruff format --check src tests
+      - run: python -m pytest -q
+
+  # Pull requests et lancement manuel : tous les systèmes.
+  full:
+    if: github.event_name != 'push'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          # Python minimal sur Linux ; les autres systèmes (Windows et macOS coûtent plus cher
-          # en minutes) seulement avec le Python courant.
+          # Python minimal sur Linux ; Windows et macOS (plus chers en minutes) avec le Python courant.
           - { os: ubuntu-latest, python: "3.10" }
           - { os: ubuntu-latest, python: "3.12" }
           - { os: windows-latest, python: "3.12" }
@@ -51,9 +69,9 @@ jobs:
       - run: ruff format --check src tests
       - run: python -m pytest -q
 
-  # La page d'affichage dans un vrai navigateur (Chromium). Ignorée dans la matrice ci-dessus,
-  # où Playwright n'est pas installé.
+  # Pull requests et lancement manuel : la page d'affichage dans un vrai navigateur (Chromium).
   page:
+    if: github.event_name != 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
