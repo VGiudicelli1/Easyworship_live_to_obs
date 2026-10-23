@@ -23,8 +23,10 @@ Documentation, commentaires et messages de commit en **français** ; identifiant
 * Fixture de référence : `tests/fixtures/ew_session_reelle_anonymisee.jsonl` (capture réelle anonymisée) ; constats dans `doc/protocole_easyworship.md` §7. Diapo en direct = `(pres_rowid, slide_rowid)` du dernier `status`, **jamais `imagehash`** (diapos vides identiques). Règle d'émission : recalculer `(visible, texte)` à chaque message et ne diffuser que s'il change ; texte vide valide ; nouveau `liverev` ⇒ tout recharger ; ignorer `permissions`, `schedulerev`, `rectype` (`spec/technique.md`, `doc/protocole_easyworship.md` §10). Les identifiants arrivent en **chaînes**. Le port d'EW change à chaque lancement d'EW : redécouvrir à **chaque** tentative de connexion. Cache des diapos vidé à chaque nouveau `liverev` (identifiants des chants négatifs et éphémères). Rien en direct = `imagehash` vide. Perte de connexion > 2 s (`lost_grace_seconds`) ⇒ `visible=false` ; en dessous, garder le texte (pas de clignotement, §11 et `spec/technique.md`). Aucun champ « port EW » dans l'interface. Nom résolu en IPv4 seule + `last_ip` mémorisée (§14). Texte = toujours `content` (diapo avec média + texte : le texte est diffusé ; média seul : texte vide ; ni média ni compte à rebours transmis) ; texte brut sans mise en forme ; décoder l'UTF-8 avec remplacement. Réseau : **IPv4 d'abord** (l'IPv6 ne répond jamais côté EW), requêtes mDNS parallèles, délais courts par adresse, jamais cumulés (`doc/protocole_easyworship.md` §12).
 * Ne pas pousser sur une autre branche que celle de la tâche ; ne pas créer de PR sans demande.
 
-## Commandes (cible, une fois le code en place)
-* Tests : `pytest` · Lint : `ruff check .` · Lancer : `python -m ew_to_obs --headless`
+## Commandes
+* Installer : `pip install -e ".[dev]"` · Tests : `python -m pytest` · Lint : `ruff check src tests && ruff format --check src tests`
+* Lancer le client seul : `python -m ew_to_obs --host NOM_OU_IP` (une ligne JSON par changement d'état)
+* Code : `src/ew_to_obs/` (`protocol`, `live`, `discovery`, `client`) ; tests : `tests/` (fixtures réelles anonymisées dans `tests/fixtures/`, faux EW dans `tests/fake_ew.py`). `tools/ew_capture.py` reste un outil autonome (code mDNS volontairement dupliqué).
 * Build : voir `doc/build_et_installation.md`
 
 ## Questions ouvertes

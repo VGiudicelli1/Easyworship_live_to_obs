@@ -22,6 +22,25 @@ Objectif : **une seule application**, simple, qui se souvient du PC EasyWorship,
 * **OBS** avec une *Source navigateur*.
 * Application visée : macOS, Windows et Linux.
 
+## Développement
+
+Étape 1 du [plan](doc/plan_de_migration.md) : le **client EasyWorship** (`src/ew_to_obs/`) est écrit et testé ; le serveur web, la configuration, l'interface et le packaging restent à faire.
+
+```
+python -m venv venv && source venv/bin/activate     # Windows : venv\Scripts\activate
+pip install -e ".[dev]"
+python -m pytest            # 92 tests : décodeur, logique rejouée sur 13 captures réelles, client sur faux EW
+ruff check src tests && ruff format --check src tests
+python -m ew_to_obs --host NOM_OU_IP_DU_PC_EW    # affiche une ligne JSON à chaque changement de diapo
+```
+
+| Module | Rôle |
+|---|---|
+| `protocol.py` | trames (CRLF + octets joints), messages, binaire de `LiveData` |
+| `live.py` | logique pure : messages d'EW → état `(visible, texte)` |
+| `discovery.py` | résolution IPv4, port par mDNS (parallèle), connexion TCP |
+| `client.py` | boucle asynchrone : appairage, reconnexion, délai de grâce de 2 s, heartbeats, keepalive |
+
 ## Documentation (branche `claude/analyse_repo`)
 
 | Document | Contenu |
