@@ -21,7 +21,7 @@ Une église (ou tout lieu de culte / événement) projette textes de chants et v
 
 1. **UC1 – Afficher la diapo live dans OBS.** Quand l'opérateur EW change de diapo, le texte dans OBS change en moins d'une seconde.
 2. **UC2 – Masquer quand EW masque.** Si EW passe en *logo*, *black* ou *clear*, le texte disparaît d'OBS.
-3. **UC3 – Premier démarrage.** L'opérateur indique une seule fois le PC qui héberge EW ; l'application s'en souvient aux lancements suivants.
+3. **UC3 – Premier démarrage.** L'opérateur indique une seule fois le PC qui héberge EW ; l'application s'en souvient aux lancements suivants. Au tout premier lancement, EW demande à l'opérateur d'**accepter la télécommande** (appairage) ; l'application affiche qu'elle attend cette acceptation.
 4. **UC4 – Reconnexion automatique.** Si EW est redémarré ou si le réseau coupe, l'application se reconnecte sans intervention.
 5. **UC5 – Installation.** L'opérateur installe l'application depuis un installeur, sans Python ni ligne de commande.
 5b. **UC5b – Démarrage automatique (Windows, à l'étude).** Variante : l'application tourne sur le PC Windows d'EW et démarre avec la session ; OBS (Mac) lit alors la page via le réseau.

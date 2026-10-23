@@ -20,7 +20,7 @@ class LiveState:
 class EwClient:
     async def run(self, host: str) -> None        # boucle infinie avec reconnexion
     on_state: Callable[[LiveState], None]
-    on_status: Callable[[ConnectionStatus], None] # SEARCHING, CONNECTING, CONNECTED, LOST
+    on_status: Callable[[ConnectionStatus], None] # SEARCHING, CONNECTING, WAITING_PAIRING, CONNECTED, LOST
 ```
 
 ## 2. Application ↔ navigateur (OBS)
@@ -67,7 +67,7 @@ Règles :
 * Démarrage automatique de la connexion si un hôte est mémorisé.
 * Un seul bouton Démarrer/Arrêter si nécessaire ; sinon l'application tourne tant qu'elle est ouverte.
 * Fermeture = arrêt propre des sockets.
-* État EW : `Recherche… / Connexion… / Connecté / Perdu (nouvel essai dans N s)`.
+* État EW : `Recherche… / Connexion… / En attente d'acceptation sur le PC EasyWorship / Connecté / Perdu (nouvel essai dans N s)`. L'état « en attente » correspond à la réponse `notPaired` d'EW (l'opérateur doit accepter la télécommande dans EW) ; la connexion reste ouverte et les heartbeats continuent.
 
 ## 4. Configuration (`config.json`)
 
@@ -79,7 +79,8 @@ Emplacement : dossier de configuration utilisateur de l'OS (voir `spec/technique
   "ew_host": "PC-REGIE",
   "web_port": 8000,
   "web_bind": "127.0.0.1",
-  "client_id": "<uuid généré au premier lancement>",
+  "client_id": "<uuid généré au premier lancement, conservé : c'est l'identité appairée dans EW>",
+  "device_name": "EasyWorship vers OBS",
   "autostart": false
 }
 ```

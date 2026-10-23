@@ -82,7 +82,7 @@ Source : `tests/fixtures/ew_session_reelle_anonymisee.jsonl` (60 s, EW 7 sous Wi
 * Les retours à la ligne du texte sont `\r\n`, le texte contient apostrophes typographiques, accents et doubles espaces : normaliser en `\n` côté sortie, ne pas « nettoyer ».
 
 ### Nouveau / différent de ce qu'on croyait
-1. **Message `paired`** (`{"action":"paired","requestrev":"0"}`) : première réponse à `connect`, jamais géré par la V1. Signifie vraisemblablement « télécommande reconnue ». *Reste à tester avec un `uid` jamais utilisé* (voir risque dans `spec/technique.md`).
+1. **Messages `paired` / `notPaired`** (`{"action":"paired","requestrev":"0"}`) : première réponse à `connect`. `paired` = télécommande connue ; `notPaired` = inconnue, voir §8 (appairage validé en pratique le 2026-10-23).
 2. **Types** : dans `status` et `slideInfo`, `pres_rowid`, `slide_rowid`, `pres_no`, `slide_no`, `schedulerev`, `liverev`, `revision`, `requestrev`, `label_*` sont des **chaînes** ; `logo/black/clear` sont des booléens JSON ; `rectype` et `permissions` des entiers. Les clés du binaire `LiveData` sont des entiers : **comparer en normalisant le type** (le script d'analyse avait ce bug).
 3. **Un changement de diapo produit souvent deux `status`**, à 5–150 ms d'écart : le premier porte le nouveau `slide_rowid` avec l'**ancien** `imagehash`, le second met à jour l'`imagehash` (9 changements sur 23). Se baser sur `imagehash` (logique V1) retarde donc l'affichage, et ne distingue pas deux diapos d'image identique. **Clé recommandée : `(pres_rowid, slide_rowid)` + `logo/black/clear`**, avec un anti-rebond de ~100 ms.
 4. `rectype` vaut 0 sur le `status` qui suit un changement de présentation (et à la connexion), 1 ensuite ; un `status` « 0 » est parfois suivi immédiatement du même en « 1 » (clear). *Hypothèse non confirmée* : 0 = présentation, 1 = diapo.
@@ -93,3 +93,23 @@ Source : `tests/fixtures/ew_session_reelle_anonymisee.jsonl` (60 s, EW 7 sous Wi
 
 ### Non couvert par la capture (à refaire)
 Diapo **sans texte** (image/fond), présentation vide, coupure réseau et reconnexion, redémarrage d'EW, édition d'une diapo en direct (`revision` qui change sans `liverev`), diapos très longues, nouvel `uid`, version exacte d'EW.
+
+## 8. Appairage (2e capture réelle, `uid` neuf, EW 7.4.1.9)
+
+Source : `tests/fixtures/ew_session_appairage_anonymisee.jsonl` (58 s, 346 trames, EW 7 version 7.4.1.9, client Mac).
+
+| t (s) | Événement |
+|---|---|
+| 0,006 | Client → `connect` avec un `uid` jamais vu et `device_name = "ew to obs"` |
+| 0,018 | EW → **`{"action":"notPaired","requestrev":"0"}`** (aucun `status`, aucune donnée) |
+| 3, 6 | Client → `heartbeat` : la connexion reste ouverte, EW ne répond rien |
+| **8,694** | EW → **`paired`** puis, **dans la même milliseconde**, le premier `status` : l'utilisateur vient d'**accepter la télécommande sur le PC EasyWorship** |
+| 8,695 → 8,76 | Séquence habituelle : `GetLiveData` → `LiveData` → `getSlideInfo` × n → `slideInfo` |
+
+Conséquences :
+* Un `uid` inconnu **n'est pas refusé** : EW laisse la connexion ouverte et attend la décision de l'opérateur. Le client doit **rester connecté et continuer les heartbeats** (≥ 1 toutes les 3 s) pendant l'attente, et afficher « En attente d'acceptation sur le PC EasyWorship ».
+* Un `uid` déjà accepté reçoit `paired` immédiatement (capture du §7 avec l'`uid` de la V1). **Non vérifié** : EW mémorise-t-il durablement l'`uid` accepté (redémarrage d'EW, plusieurs jours) ? Test à faire : relancer le script avec `--client-id fb40154d-fe44-4cd8-9b87-abb34ba93fb1` (l'`uid` de cette session).
+* Délai d'attente maximal d'EW avant refus/abandon : **inconnu** (non testé au-delà de 9 s). Cas « refusé » par l'opérateur : non testé, message attendu inconnu.
+* `device_name` est probablement le libellé montré à l'opérateur dans la demande : choisir un nom explicite (« EasyWorship vers OBS »).
+* Le port TCP de la télécommande valait **57395 dans les deux captures** (même EW, sessions différentes) : il n'est peut-être pas aussi dynamique qu'annoncé, mais ne pas s'y fier ; garder la découverte mDNS.
+* Cette capture ajoute 27 changements de présentation (111 `slideInfo`) sans écart avec le §7 : mêmes champs, mêmes types, `slideInfo` dans le désordre, aucune diapo vide, aucune diapo modifiée ; `logo`/`black`/`clear` toujours faux.

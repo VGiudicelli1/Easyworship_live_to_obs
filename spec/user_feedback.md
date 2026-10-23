@@ -21,8 +21,8 @@ Source : retour du mainteneur (utilisateur principal) après usage de la version
 
 * ~~OBS sur le même PC qu'EW ?~~ **Réponse** : non. EW sur Windows ; OBS et les deux applications Python sur le même Mac.
 * ~~OS ?~~ **Réponse** : multiplateforme (Mac, Windows, Linux) si possible. Usage actuel Mac ; Windows (PC d'EW, démarrage automatique) à l'étude.
-* ~~Version d'EW ?~~ **Réponse** : EW 7 « de mémoire » (version exacte à confirmer).
+* ~~Version d'EW ?~~ **Réponse** : EasyWorship 7, version 7.4.1.9.
 * ~~Garder export fichier, filtre, crédits ?~~ **Réponse** : probablement non, à revoir avec la nouvelle pile.
-* Capture de trames réelles : **en attente d'accès à EW**.
+* ~~Capture de trames réelles~~ : **faites** (2026-10-23), voir `doc/protocole_easyworship.md` §7–8.
 * Le nom du PC EW est-il stable sur le réseau local (DHCP + DNS local / mDNS) ? À tester.
 * Prérequis découvert : EW exige **Bonjour** sur son PC pour activer la télécommande.

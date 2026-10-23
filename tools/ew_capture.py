@@ -41,7 +41,7 @@ V1_DEVICE_NAME = "ew to obs"
 EXTRA_ACTIONS = {"LiveData", "ScheduleData", "currentImage", "slideImage"}
 IMAGE_ACTIONS = {"currentImage", "slideImage"}
 KNOWN_SENT = {"connect", "heartbeat", "GetLiveData", "getSlideInfo"}
-KNOWN_RECV = {"paired", "status", "LiveData", "slideInfo", "ScheduleData", "currentImage", "slideImage"}
+KNOWN_RECV = {"paired", "notPaired", "status", "LiveData", "slideInfo", "ScheduleData", "currentImage", "slideImage"}
 REDACT_KEYS = {"title", "content", "device_name"}
 LIVEDATA_HEADER = struct.Struct("<lqqqlq")  # 40 octets, voir doc/protocole_easyworship.md
 LIVEDATA_SLIDE = struct.Struct("<qq")  # rowid, revision
@@ -318,6 +318,8 @@ class Session:
                 self.requestrev = int(msg["requestrev"])
             except (TypeError, ValueError):
                 pass
+        if action == "notPaired":
+            self.log("!! EN ATTENTE D'APPAIRAGE : acceptez la télécommande « %s » sur le PC EasyWorship." % self.device_name)
         if not self.active:
             return
         if action == "status" and "liverev" in msg:

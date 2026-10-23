@@ -18,7 +18,7 @@ Objectif : **une seule application**, simple, qui se souvient du PC EasyWorship,
 
 ## Prérequis
 
-* **EasyWorship 7** avec la *télécommande* activée. EW exige que **Bonjour** (Apple) soit installé sur son PC pour activer cette télécommande.
+* **EasyWorship 7** (testé : 7.4.1.9) avec la *télécommande* activée. Au premier lancement, **EW demande d'accepter la nouvelle télécommande** (appairage) sur le PC EasyWorship. EW exige que **Bonjour** (Apple) soit installé sur son PC pour activer cette télécommande.
 * **OBS** avec une *Source navigateur*.
 * Application visée : macOS, Windows et Linux.
 
@@ -41,7 +41,7 @@ Objectif : **une seule application**, simple, qui se souvient du PC EasyWorship,
 
 | Version d'EasyWorship | Compatible |
 |:--:|:--:|
-| EasyWorship 7 (version exacte à confirmer, ≥ 7.2.3 pour la découverte du port) | Utilisée par le mainteneur ; test réel en juin 2024 |
+| **EasyWorship 7.4.1.9** (build 7.4.1.9) | Testé le 2026-10-23 (EW sous Windows, client Mac) : connexion, appairage, lecture des diapos |
 
 | Version d'OBS | Compatible |
 |:--:|:--:|

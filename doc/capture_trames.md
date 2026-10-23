@@ -32,6 +32,9 @@ Windows : remplacer `python3` par `py`.
 * Résumé affiché à la fin : actions vues, champs, valeurs distinctes de `status`, délais, et **points d'attention** (action inconnue, champ `size` hors liste, binaire incohérent, champs « inconnus » du header non nuls).
 * Le dossier `captures/` est ignoré par Git : les fichiers contiennent le texte des diapos. Pour partager une capture, utiliser `--redact` (le script ne masque que `title`, `content`, `device_name`) et relire le fichier avant publication.
 
+## Premier lancement avec un nouvel `uid`
+EW répond `notPaired` et affiche une demande à accepter **sur le PC EasyWorship** ; le script reste connecté (heartbeats) et un message « EN ATTENTE D'APPAIRAGE » s'affiche. Après acceptation, les données arrivent.
+
 ## Si la connexion échoue
 Le script affiche chaque étape : serveurs mDNS interrogés (toutes les adresses de l'hôte, IPv4 et IPv6), méthode utilisée, erreur exacte. Si dnspython échoue, il retente avec le repli manuel. Vérifier dans l'ordre : Bonjour installé et télécommande activée sur le PC EW ; le nom du PC se résout (`ping NOM`) ; essayer l'IP à la place du nom ; pare-feu Windows (UDP 5353 et port TCP de la télécommande) ; si la découverte échoue seule, `--port` avec le port affiché par EW. Si le port est ouvert mais EW ne répond pas, accepter l'éventuelle demande d'appairage de la télécommande sur EW.
 
