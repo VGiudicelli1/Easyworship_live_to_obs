@@ -8,6 +8,13 @@ Une église (ou tout lieu de culte / événement) projette textes de chants et v
 
 > Récupérer en temps réel le contenu texte de la diapo en direct d'EasyWorship et l'afficher dans OBS via une *Source navigateur*.
 
+## Cas d'usage réel (précisé par le mainteneur)
+
+* Les paroles des chants s'affichent comme **sous-titres sur l'ensemble des scènes « caméra »** d'OBS : texte **blanc sur fond gris transparent** (le style par défaut de la page).
+* Un texte de **2 à 8 lignes, 4 en moyenne** ; les cas extrêmes (texte très long) n'ont pas à être parfaitement rendus.
+* **Hors sujet** : une scène OBS spécifique contient le live d'EasyWorship lui-même (mise en plein écran) ; ce projet ne la traite pas et ne la remplace pas.
+* Conséquence : une seule source navigateur, réutilisée dans toutes les scènes caméra (un seul navigateur, une seule connexion), dimensionnée en bandeau.
+
 ## Acteurs
 
 | Acteur | Rôle |
@@ -51,6 +58,7 @@ Prérequis EW : **Bonjour doit être installé sur le PC EW**, sinon la téléco
 * Pas de graphe de « connecteurs » / widgets reconfigurables (tentative v2 abandonnée).
 * Pas de support d'autres logiciels que EW → OBS (vMix était la cible de l'inspiration ew2vm, pas la nôtre).
 * Pas de contrôle d'EW depuis OBS.
+* Pas de rendu plein écran du live d'EasyWorship (scène OBS dédiée, capture d'EW) : seuls les sous-titres sont concernés.
 * Pas d'accès internet requis pendant le culte (voir risque CDN dans `technique.md`).
 
 ## Contraintes et risques métier

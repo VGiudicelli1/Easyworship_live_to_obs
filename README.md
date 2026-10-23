@@ -35,7 +35,13 @@ python -m ew_to_obs --host NOM_OU_IP_DU_PC_EW            # affiche une ligne JSO
 python -m ew_to_obs --host NOM_OU_IP_DU_PC_EW --serve    # + sert la page pour OBS sur http://localhost:8000/
 ```
 
-Dans OBS : *Sources → + → Navigateur*, coller `http://localhost:8000/`, largeur et hauteur de la scène (ex. 1920 × 1080). Le fond reste transparent. Réglages par l'URL (`?valign=bottom&bg=rgba(0,0,0,.65)&color=white…`) : voir [spec/interfaces.md](spec/interfaces.md) ; `?lines=4` pour une taille de texte stable entre les diapos (voir [spec/interfaces.md](spec/interfaces.md)) ; `?demo=1` pour régler le style sans application. Tests dans un navigateur : `pip install -e ".[dev,browser]" && playwright install chromium`.
+Sous-titres sur les scènes caméra d'OBS (cas d'usage prévu) :
+
+1. Créer **une** source *Navigateur* avec l'adresse `http://localhost:8000/?lines=4`, de la taille du bandeau voulu (ex. 1920 × 360), placée en bas de l'image. Le fond de la page est transparent ; le cadre du texte est gris translucide, texte blanc.
+2. Dans chaque scène caméra : *Ajouter une source existante* → cette même source (un seul navigateur, une seule connexion).
+3. Ne pas éteindre la source quand elle n'est pas visible : elle reste à jour et le texte apparaît tout de suite au changement de scène.
+
+La scène OBS qui montre le live d'EasyWorship en plein écran n'est pas concernée par ce projet. Réglages par l'URL (`?valign=bottom&bg=rgba(0,0,0,.65)&color=white…`) : voir [spec/interfaces.md](spec/interfaces.md) ; `?lines=4` pour une taille de texte stable entre les diapos (voir [spec/interfaces.md](spec/interfaces.md)) ; `?demo=1` pour régler le style sans application. Tests dans un navigateur : `pip install -e ".[dev,browser]" && playwright install chromium`.
 
 | Module | Rôle |
 |---|---|

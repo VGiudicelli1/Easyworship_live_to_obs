@@ -55,7 +55,7 @@ Le fichier `.spec` embarque `public/` via `datas=[("src/ew_to_obs/public", "ew_t
 1. Télécharger l'installeur depuis *Releases*.
 2. Windows : SmartScreen peut avertir (exécutable non signé) → « Informations complémentaires » → « Exécuter quand même ». Documenter avec capture d'écran. Pare-feu : accepter la demande d'accès réseau privé au premier lancement (ou fournir une règle créée par l'installeur).
 3. Premier lancement : choisir le PC EasyWorship (liste auto ou saisie du nom) → l'URL pour OBS s'affiche.
-4. Dans OBS : *Sources → + → Navigateur* → coller l'URL → largeur/hauteur = résolution de la scène → cocher *Actualiser le navigateur quand la scène devient active*.
+4. Dans OBS : *Sources → + → Navigateur* → coller l'URL (ex. `http://localhost:8000/?lines=4`) → largeur/hauteur = **le bandeau de sous-titres** (ex. 1920 × 360). Pour l'avoir sur toutes les scènes caméra : *Ajouter une source existante* dans chaque scène (une seule source navigateur, donc une seule connexion). Laisser la source active même hors scène : la page garde le texte à jour et l'affiche tout de suite au changement de scène.
 5. Option « Démarrer avec le système » : Windows (dossier Démarrage), macOS (Éléments de connexion / LaunchAgent), Linux (autostart). Cas visé : application sur le PC Windows d'EW.
 6. Prérequis côté EW : installer **Bonjour** sur le PC EW (sinon la télécommande EW ne s'active pas).
 
