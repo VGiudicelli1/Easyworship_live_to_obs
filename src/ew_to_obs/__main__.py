@@ -1,10 +1,12 @@
-"""Easyworship vers OBS, sans interface.
+"""Easyworship vers OBS.
 
-    python -m ew_to_obs --host NOM_DU_PC_EW --serve    1er lancement : mémorise le PC EW
-    python -m ew_to_obs --serve                        lancements suivants : plus rien à saisir
+    python -m ew_to_obs                                ouvre la fenêtre (mode normal)
+    python -m ew_to_obs --headless --host NOM --serve  sans fenêtre, 1er lancement
+    python -m ew_to_obs --headless --serve             sans fenêtre, ensuite : rien à saisir
 
-Sans --serve, affiche une ligne JSON à chaque changement de diapo. La configuration (PC EW, dernière
-IP, identité de la télécommande) est enregistrée dans le dossier de configuration de l'utilisateur.
+Sans fenêtre et sans --serve, affiche une ligne JSON à chaque changement de diapo. La configuration
+(PC EW, dernière IP, identité de la télécommande) est enregistrée dans le dossier de configuration
+de l'utilisateur.
 """
 
 from __future__ import annotations
@@ -62,20 +64,17 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--show-config", action="store_true", help="affiche la configuration et quitte"
     )
-    parser.add_argument("--headless", action="store_true", help="(par défaut) sans interface")
+    parser.add_argument(
+        "--headless", action="store_true", help="sans fenêtre (sinon : la fenêtre s'ouvre)"
+    )
     parser.add_argument("-v", "--verbose", action="store_true")
     return parser
 
 
-def resolve(args: argparse.Namespace, store: ConfigStore) -> Settings | None:
-    """Fusionne la ligne de commande et la configuration, et mémorise ce qui doit l'être.
-
-    Mémorisés : le PC EW, l'identité et le nom de la télécommande. Les autres options ne valent que
-    pour ce lancement (leurs valeurs durables se règlent dans le fichier de configuration)."""
+def remember(args: argparse.Namespace, store: ConfigStore) -> None:
+    """Mémorise ce que la ligne de commande fixe durablement : le PC EW, l'identité et le nom de la
+    télécommande. Écrit aussi le fichier au premier lancement (l'identité générée doit survivre)."""
     config = store.config
-    host = args.host or config.ew_host
-    if not host:
-        return None
     changes: dict[str, object] = {}
     if args.host and args.host != config.ew_host:
         changes.update(ew_host=args.host, last_ip="")  # la dernière IP était celle de l'ancien PC
@@ -83,9 +82,20 @@ def resolve(args: argparse.Namespace, store: ConfigStore) -> Settings | None:
         changes["client_id"] = args.client_id
     if args.device_name and args.device_name != config.device_name:
         changes["device_name"] = args.device_name
-    store.update(**changes)  # écrit aussi le fichier au premier lancement (identité générée)
+    store.update(**changes)
+
+
+def resolve(args: argparse.Namespace, store: ConfigStore) -> Settings | None:
+    """Fusionne la ligne de commande et la configuration (mode sans fenêtre).
+
+    Les options autres que le PC EW, l'identité et le nom ne valent que pour ce lancement (leurs
+    valeurs durables se règlent dans le fichier de configuration). None sans PC EW connu."""
+    if not (args.host or store.config.ew_host):
+        return None
+    remember(args, store)
+    config = store.config
     return Settings(
-        host=host,
+        host=args.host or config.ew_host,
         port=args.port,
         client_id=config.client_id,
         device_name=config.device_name,
@@ -148,6 +158,37 @@ async def run(settings: Settings, store: ConfigStore) -> int:
     return 0
 
 
+def _main_window(args: argparse.Namespace, store: ConfigStore) -> int:
+    """Mode normal : la fenêtre. Demande tkinter et un écran ; sinon explique comment faire sans."""
+    try:
+        import tkinter
+
+        from .service import Service
+        from .ui import run_ui
+    except ImportError as exc:
+        print(
+            "La fenêtre demande tkinter (%s).\n"
+            "macOS : utilisez le Python de python.org, ou `brew install python-tk`.\n"
+            "Linux : `sudo apt install python3-tk`.\n"
+            "Sans fenêtre : python -m ew_to_obs --headless --host NOM_DU_PC --serve" % exc,
+            file=sys.stderr,
+        )
+        return 3
+    remember(args, store)  # --host, --client-id, --device-name restent mémorisés
+    log.info("démarrage de la fenêtre, configuration %s", store.path)
+    try:
+        return run_ui(Service(store, ew_port=args.port))
+    except tkinter.TclError as exc:
+        print(
+            "Impossible d'ouvrir la fenêtre (%s).\n"
+            "Sans fenêtre : python -m ew_to_obs --headless --host NOM_DU_PC --serve" % exc,
+            file=sys.stderr,
+        )
+        return 3
+    except KeyboardInterrupt:
+        return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     store = ConfigStore(args.config_dir)
@@ -156,10 +197,11 @@ def main(argv: list[str] | None = None) -> int:
         print("# %s (%s)" % (store.path, store.status))
         print(json.dumps(asdict(store.config), indent=2, ensure_ascii=False))
         return 0
-    log_path = setup_logging(
-        store.directory, args.verbose
-    )  # avant la lecture : ses avertissements y figurent
+    # le journal s'ouvre avant la lecture de la config : ses avertissements y figurent
+    log_path = setup_logging(store.directory, args.verbose)
     store.load()
+    if not args.headless:
+        return _main_window(args, store)
     settings = resolve(args, store)
     if settings is None:
         print(

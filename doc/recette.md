@@ -31,13 +31,17 @@ git clone https://github.com/VGiudicelli1/Easyworship_live_to_obs.git
 cd Easyworship_live_to_obs && git checkout claude/ew_client
 python3 -m venv venv && source venv/bin/activate
 pip install -e .
-python -m ew_to_obs --host NOM_DU_PC_EW --serve      # 1er lancement
-python -m ew_to_obs --serve                          # lancements suivants : plus rien à saisir
+python -m ew_to_obs                                   # la fenêtre (mode normal)
+python -m ew_to_obs --headless --host NOM_DU_PC_EW --serve   # sans fenêtre, 1er lancement
+python -m ew_to_obs --headless --serve                       # sans fenêtre, ensuite : rien à saisir
 ```
+
+La fenêtre demande **tkinter** : Python de python.org, ou `brew install python-tk` (voir R-80).
 
 Utiles : `--show-config` (affiche la configuration), `-v` (messages détaillés), `--grace 5` (délai de
 grâce pour ce lancement), `--web-port 8001` (si le port 8000 est pris), `--config-dir DOSSIER`
-(essais sans toucher à la vraie configuration).
+(essais sans toucher à la vraie configuration). **Les tests de §1 à §4 se font indifféremment dans la
+fenêtre ou en `--headless`** (dans la fenêtre : l'état s'affiche en haut, sinon dans la console).
 
 ### 0.3 Présentations de test à préparer dans EW
 
@@ -67,8 +71,8 @@ Le journal (1 Mo × 3 fichiers) contient les connexions, les erreurs et **une li
 
 ### 0.5 Ordre conseillé (≈ 2 h 30)
 
-1. §1 installation et appairage → 2. §2 connexion → 3. §3 diapos → 4. §5 OBS → 5. §4 résilience →
-6. §6 durée (laisser tourner pendant un vrai service ou une répétition) → 7. §7 variante Windows → 8. §8
+1. §1 installation et appairage → 2. §5b la fenêtre → 3. §2 connexion → 4. §3 diapos → 5. §5 OBS →
+6. §4 résilience → 7. §6 durée (laisser tourner pendant un vrai service ou une répétition) → 7. §7 variante Windows → 8. §8
 captures complémentaires.
 
 ---
@@ -394,6 +398,100 @@ Le délai se règle : `lost_grace_seconds` dans `config.json` ou `--grace`.
 
 ---
 
+## 5b. Fenêtre de l'application
+
+### R-80 · Ouverture de la fenêtre sur le Mac (P1)
+- **Faire** : `python -m ew_to_obs` avec le Python que vous utiliserez réellement.
+- **Attendu** : la fenêtre s'ouvre (~720 × 440). Sinon un message explique comment installer tkinter
+  (Python de python.org, ou `brew install python-tk`) et propose `--headless` ; code de sortie 3.
+- **Relever** : quel Python (python.org / Homebrew / système) ; version de Tk affichée par
+  `python -c "import tkinter; print(tkinter.TkVersion)"` (8.6 attendu).
+- ☐ OK ☐ KO — notes :
+
+### R-81 · Premier lancement dans la fenêtre (P1)
+- **Préparer** : configuration vide (`--config-dir` neuf).
+- **Faire** : saisir le nom du PC EW, **Appliquer** (ou Entrée).
+- **Attendu** : message d'aide « Aucun PC EasyWorship configuré… » avant la saisie ; après Appliquer :
+  pastille orange *Recherche…* puis *En attente d'acceptation* avec le message en gras
+  « Dans EasyWorship, acceptez la télécommande « EasyWorship vers OBS » » ; après acceptation :
+  pastille verte *Connecté à EasyWorship*. Le PC est mémorisé (relancer : plus rien à saisir).
+- ☐ OK ☐ KO — notes :
+
+### R-82 · Pastille et messages de perte (P1)
+- **Faire** : couper le Wi‑Fi du Mac, puis le remettre (ou fermer/rouvrir EW).
+- **Attendu** : pastille rouge *Connexion perdue : reconnexion automatique* avec le détail de l'essai
+  suivant, puis verte au retour. Les couleurs sont lisibles (orange/rouge/vert/gris).
+- ☐ OK ☐ KO — notes :
+
+### R-83 · Copier l'adresse et la coller dans OBS (P1)
+- **Faire** : bouton **Copier** puis coller dans l'adresse de la source navigateur d'OBS.
+- **Attendu** : « Adresse copiée » apparaît 2 s ; le collage donne `http://localhost:8000/?lines=4`
+  entière (aucun caractère manquant).
+- ☐ OK ☐ KO — notes :
+
+### R-84 · Réglages de la page et port (P2)
+- **Faire** : changer « Réglages de la page » (ex. `lines=6&valign=bottom`) et « Port de la page »
+  (ex. 8001), **Appliquer**.
+- **Attendu** : l'adresse affichée suit la saisie (seulement si valide) ; après Appliquer la connexion
+  redémarre et la page répond sur le nouveau port ; **il faut recoller la nouvelle adresse dans OBS**
+  (OBS ne la change pas tout seul). Valeurs conservées au relancement.
+- ☐ OK ☐ KO — notes :
+
+### R-85 · Port de la page déjà utilisé (P2)
+- **Faire** : occuper le port (une autre instance, ou `python -m http.server 8000`), lancer la fenêtre.
+- **Attendu** : bandeau rouge « Le port 8000 est déjà utilisé… » ; la connexion à EW fonctionne quand
+  même ; après changement de port + Appliquer, le bandeau disparaît.
+- ☐ OK ☐ KO — notes :
+
+### R-86 · Saisies invalides (P3)
+- **Faire** : nom vide, `http://x`, port `abc` / `70000`, réglages avec espace ou `<`.
+- **Attendu** : message rouge précis pour chacun, **rien n'est modifié ni enregistré** ; corriger fait
+  disparaître le message.
+- ☐ OK ☐ KO
+
+### R-87 · Compteur de navigateurs et aperçu (P1)
+- **Faire** : avec OBS ouvert et la source partagée sur plusieurs scènes ; changer de diapo.
+- **Attendu** : « Navigateurs (OBS) » indique **1 connecté** (une seule source partagée) ; ouvrir la
+  même adresse dans Safari/Chrome le fait passer à 2 ; l'**aperçu** montre le texte diffusé, `— rien
+  d'affiché —` quand masqué, `— diapo sans texte —` pour une diapo vide.
+- **Relever** : compteur observé avec la source dans N scènes : ______
+- ☐ OK ☐ KO — notes :
+
+### R-88 · Fermeture propre (P1)
+- **Faire** : fermer par la croix, par **Quitter**, par **Cmd+Q** (essayer les trois, relancer à chaque fois).
+- **Attendu** : le texte disparaît d'OBS, aucun processus Python résiduel (Moniteur d'activité), le
+  port web est libre immédiatement (relance sans erreur), la télécommande se déconnecte d'EW.
+- ☐ OK ☐ KO — notes :
+
+### R-89 · Fenêtre cachée, minimisée ou derrière OBS (P1)
+- **Faire** : pendant 30 min, laisser la fenêtre **minimisée / masquée / derrière OBS**, avec des
+  changements de diapo réguliers (macOS peut ralentir une application en arrière-plan : « App Nap »).
+- **Attendu** : délai d'affichage inchangé (< 1 s, cf. R-21), aucune reconnexion intempestive.
+- **Relever** : délai médian en arrière-plan ______ s. Si dégradé : noter si le problème disparaît avec
+  `--headless` lancé dans un terminal.
+- ☐ OK ☐ KO — notes :
+
+### R-90 · Apparence (P3)
+- **Faire** : mode sombre de macOS, écran Retina, redimensionnement de la fenêtre, texte très long dans
+  l'aperçu.
+- **Attendu** : tout reste lisible (boutons, champs, pastille) ; aucun texte coupé en taille normale.
+- ☐ OK ☐ KO — notes :
+
+### R-91 · « Ouvrir le dossier du journal » (P2)
+- **Attendu** : le Finder (ou l'explorateur) s'ouvre sur le dossier de §0.4, contenant `ew_to_obs.log`.
+- ☐ OK ☐ KO
+
+### R-92 · Fenêtre sous Windows (P2)
+- **Faire** : mêmes tests R-81, R-83, R-88 sur Windows (Python de python.org, tkinter inclus).
+- ☐ OK ☐ KO — notes :
+
+### R-93 · Sans fenêtre possible (P3)
+- **Faire** : sur une machine sans tkinter, `python -m ew_to_obs`.
+- **Attendu** : message clair + commande `--headless` ; code 3.
+- ☐ OK ☐ KO
+
+---
+
 ## 6. Longue durée
 
 ### R-60 · Un service complet (≈ 3 h) (P1)
@@ -471,14 +569,18 @@ python tools/ew_capture.py NOM_DU_PC_EW --reconnect --duration 300 --redact
 | H9 | Le mDNS fonctionne en boucle locale (variante app sur le PC EW) | R-70 |
 | H10 | Un changement de contenu en direct est repéré par EW dans un délai raisonnable | R-33 |
 | H11 | Aucune fenêtre de pare-feu bloquante n'apparaît | R-15 |
+| H12 | Une fenêtre masquée ou en arrière-plan ne ralentit pas l'affichage (App Nap de macOS) | R-89 |
+| H13 | tkinter est disponible et la fenêtre s'affiche correctement avec le Python choisi sur le Mac | R-80, R-90 |
+| H14 | Copier, fermer par Cmd+Q et le dossier du journal se comportent normalement sur macOS et Windows | R-83, R-88, R-91, R-92 |
 
 ## 10. Ce qui est déjà couvert automatiquement (rappel)
 
-172 tests (154 sans navigateur) : décodage des trames coupées n'importe où, rejeu de 13 captures réelles (diapos, appairage,
+211 tests : décodage des trames coupées n'importe où, rejeu de 13 captures réelles (diapos, appairage,
 révocation, coupures, relance d'EW, vides, médias, emojis, 150 diapos), client contre un faux EW sur
 TCP réel (appairage, reconnexion, délai de grâce, heartbeats), découverte IPv4 d'abord et mDNS parallèle,
 configuration et journal, ligne de commande, serveur web (WebSocket), page dans Chromium (taille du
-texte, texte brut, URL, reconnexion). **Aucun de ces tests n'a touché un vrai EasyWorship ni OBS.**
+texte, texte brut, URL, reconnexion), service et **fenêtre** (états, validation des saisies, copie,
+fermeture) sous Linux avec un écran virtuel. **Aucun de ces tests n'a touché un vrai EasyWorship ni OBS.**
 
 ## 11. Rapport de recette à renvoyer
 

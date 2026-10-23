@@ -69,7 +69,8 @@ jobs:
       - run: ruff format --check src tests
       - run: python -m pytest -q
 
-  # Pull requests et lancement manuel : la page d'affichage dans un vrai navigateur (Chromium).
+  # Pull requests et lancement manuel : la page d'affichage dans un vrai navigateur (Chromium)
+  # et la fenêtre de l'application sous un écran virtuel.
   page:
     if: github.event_name != 'push'
     runs-on: ubuntu-latest
@@ -83,3 +84,5 @@ jobs:
       - run: pip install -e ".[dev,browser]"
       - run: playwright install --with-deps chromium
       - run: python -m pytest -q tests/test_page.py
+      # La fenêtre (Tkinter) sous un écran virtuel.
+      - run: xvfb-run -a python -m pytest -q tests/test_ui.py

@@ -29,6 +29,9 @@ CONFIG_VERSION = 1
 
 _HOST = re.compile(r"^[A-Za-z0-9._-]{1,253}$")
 _ID = re.compile(r"^[A-Za-z0-9-]{8,64}$")
+_QUERY = re.compile(
+    r"^[A-Za-z0-9=&%.,_()#:+-]{0,200}$"
+)  # réglages de la page, sans espace ni guillemet
 
 
 def new_client_id() -> str:
@@ -45,6 +48,7 @@ class Config:
     web_port: int = 8000
     web_bind: str = "127.0.0.1"
     lost_grace_seconds: float = 2.0
+    obs_query: str = "lines=4"  # réglages de la page ajoutés à l'adresse donnée à OBS
 
 
 def default_config_dir(env: dict | None = None, platform: str | None = None) -> Path:
@@ -59,6 +63,14 @@ def default_config_dir(env: dict | None = None, platform: str | None = None) -> 
     if platform == "darwin":
         return home / "Library" / "Application Support" / APP_DIR
     return Path(env.get("XDG_CONFIG_HOME") or home / ".config") / APP_DIR
+
+
+def valid_host(value: object) -> bool:
+    return isinstance(value, str) and bool(_HOST.match(value.strip()))
+
+
+def valid_query(value: object) -> bool:
+    return isinstance(value, str) and bool(_QUERY.match(value))
 
 
 def _number(value: object, low: float, high: float) -> float | None:
@@ -128,6 +140,12 @@ def clean(raw: dict) -> tuple[Config, list[str]]:
             config.lost_grace_seconds = grace
         else:
             reject("lost_grace_seconds", raw["lost_grace_seconds"])
+    if "obs_query" in raw:
+        value = raw["obs_query"]
+        if valid_query(value):
+            config.obs_query = value
+        else:
+            reject("obs_query", value)
     version = raw.get("version", CONFIG_VERSION)
     if isinstance(version, int) and version > CONFIG_VERSION:
         warnings.append(

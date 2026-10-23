@@ -24,16 +24,17 @@ Objectif : **une seule application**, simple, qui se souvient du PC EasyWorship,
 
 ## Développement
 
-Étapes 1 à 3 du [plan](doc/plan_de_migration.md) : le **client EasyWorship**, le **serveur web avec la page pour OBS** et la **configuration mémorisée** (`src/ew_to_obs/`) sont écrits et testés **sans EasyWorship ni OBS réels** ; l'interface et le packaging restent à faire. Tout ce qui reste à valider avec le vrai matériel est dans **[doc/recette.md](doc/recette.md)**.
+Étapes 1 à 5 du [plan](doc/plan_de_migration.md) : le **client EasyWorship**, le **serveur web avec la page pour OBS**, la **configuration mémorisée** et la **fenêtre** (`src/ew_to_obs/`) sont écrits et testés **sans EasyWorship ni OBS réels** ; il reste le packaging (installeur). Tout ce qui reste à valider avec le vrai matériel est dans **[doc/recette.md](doc/recette.md)**.
 
 ```
 python -m venv venv && source venv/bin/activate     # Windows : venv\Scripts\activate
 pip install -e ".[dev]"
-python -m pytest            # 154 tests (+ 18 dans un vrai navigateur si Playwright est installé)
+python -m pytest            # 211 tests ; 18 (page) ignorés sans Playwright, 20 (fenêtre) sans tkinter + écran (Linux, Xvfb)
 ruff check src tests && ruff format --check src tests
-python -m ew_to_obs --host NOM_OU_IP_DU_PC_EW --serve    # 1er lancement : mémorise le PC EW, sert la page sur http://localhost:8000/
-python -m ew_to_obs --serve                              # ensuite : plus rien à saisir (config + journal dans le dossier de l'OS)
-python -m ew_to_obs --host NOM_OU_IP_DU_PC_EW            # sans --serve : une ligne JSON par changement de diapo
+python -m ew_to_obs                                                  # la fenêtre : saisir le PC EW une fois, tout est mémorisé
+python -m ew_to_obs --headless --host NOM_DU_PC_EW --serve           # sans fenêtre, 1er lancement
+python -m ew_to_obs --headless --serve                               # sans fenêtre, ensuite : plus rien à saisir
+python -m ew_to_obs --headless --host NOM_DU_PC_EW                   # sans fenêtre ni page : une ligne JSON par changement de diapo
 ```
 
 Sous-titres sur les scènes caméra d'OBS (cas d'usage prévu) :
@@ -42,7 +43,7 @@ Sous-titres sur les scènes caméra d'OBS (cas d'usage prévu) :
 2. Dans chaque scène caméra : *Ajouter une source existante* → cette même source (un seul navigateur, une seule connexion).
 3. Ne pas éteindre la source quand elle n'est pas visible : elle reste à jour et le texte apparaît tout de suite au changement de scène.
 
-La scène OBS qui montre le live d'EasyWorship en plein écran n'est pas concernée par ce projet. Réglages par l'URL (`?valign=bottom&bg=rgba(0,0,0,.65)&color=white…`) : voir [spec/interfaces.md](spec/interfaces.md) ; `?lines=4` pour une taille de texte stable entre les diapos (voir [spec/interfaces.md](spec/interfaces.md)) ; `?demo=1` pour régler le style sans application. Tests dans un navigateur : `pip install -e ".[dev,browser]" && playwright install chromium`.
+La scène OBS qui montre le live d'EasyWorship en plein écran n'est pas concernée par ce projet. Réglages par l'URL (`?valign=bottom&bg=rgba(0,0,0,.65)&color=white…`) : voir [spec/interfaces.md](spec/interfaces.md) ; `?lines=4` pour une taille de texte stable entre les diapos (voir [spec/interfaces.md](spec/interfaces.md)) ; `?demo=1` pour régler le style sans application. Tests dans un navigateur : `pip install -e ".[dev,browser]" && playwright install chromium`. Tests de la fenêtre (Linux) : `xvfb-run -a python -m pytest tests/test_ui.py` (paquet `python3-tk`). Sur Mac, la fenêtre demande tkinter (Python de python.org, ou `brew install python-tk`).
 
 | Module | Rôle |
 |---|---|
@@ -50,6 +51,7 @@ La scène OBS qui montre le live d'EasyWorship en plein écran n'est pas concern
 | `live.py` | logique pure : messages d'EW → état `(visible, texte)` |
 | `discovery.py` | résolution IPv4, port par mDNS (parallèle), connexion TCP |
 | `config.py`, `logs.py` | configuration JSON dans le dossier de l'OS (identité, PC EW, dernière IP), journal tournant sans texte de diapo |
+| `service.py`, `ui.py`, `status_text.py` | la fenêtre Tkinter : le service (client + serveur web) tourne dans un thread, la fenêtre lit un instantané toutes les 250 ms |
 | `client.py` | boucle asynchrone : appairage, reconnexion, délai de grâce de 2 s, heartbeats, keepalive |
 | `web.py` + `public/` | serveur `aiohttp` (page + WebSocket) ; page sans CDN, texte brut, taille de police ajustée à la zone |
 

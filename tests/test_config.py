@@ -230,4 +230,5 @@ def test_saved_file_is_readable_json_with_all_fields(tmp_path):
         "web_port",
         "web_bind",
         "lost_grace_seconds",
+        "obs_query",
     }

@@ -131,7 +131,7 @@ def test_main_without_host_explains_what_to_do(tmp_path, capsys):
     from ew_to_obs.__main__ import main
 
     try:
-        assert main(["--config-dir", str(tmp_path / "cfg")]) == 2
+        assert main(["--headless", "--config-dir", str(tmp_path / "cfg")]) == 2
         err = capsys.readouterr().err
         assert "--host" in err and "mémorisé" in err
     finally:
@@ -149,7 +149,7 @@ def test_corrupt_config_warning_reaches_the_log_file(tmp_path):
     directory.mkdir()
     (directory / "config.json").write_text("{ cassé", encoding="utf-8")
     try:
-        assert main(["--config-dir", str(directory)]) == 2  # pas de PC EW connu
+        assert main(["--headless", "--config-dir", str(directory)]) == 2  # pas de PC EW connu
         log = (directory / LOG_NAME).read_text(encoding="utf-8")
         assert "mise de côté" in log and "ré-accepter" in log
         assert (directory / "config.json.bak").exists()
