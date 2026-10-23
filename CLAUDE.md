@@ -19,7 +19,8 @@ Documentation, commentaires et messages de commit en **français** ; identifiant
 * Le protocole EW est non documenté : toute modification de `ew_client` doit être couverte par un test sur trames rejouées. Ne pas inventer de messages.
 * Aucune dépendance réseau externe à l'exécution (pas de CDN).
 * Pas d'écriture dans le dossier d'installation ; config et logs dans le dossier utilisateur de l'OS.
-* Pas d'IP en dur ; `client_id` généré par installation.
+* Pas d'IP en dur ; `client_id` généré par installation **sous réserve** d'un test avec un `uid` neuf (EW répond `paired` à l'`uid` de la V1, comportement avec un inconnu non vérifié).
+* Fixture de référence : `tests/fixtures/ew_session_reelle_anonymisee.jsonl` (capture réelle anonymisée) ; constats dans `doc/protocole_easyworship.md` §7. Clé de détection d'une diapo : `(pres_rowid, slide_rowid)`, pas `imagehash`. Les identifiants arrivent en **chaînes**.
 * Ne pas pousser sur une autre branche que celle de la tâche ; ne pas créer de PR sans demande.
 
 ## Commandes (cible, une fois le code en place)

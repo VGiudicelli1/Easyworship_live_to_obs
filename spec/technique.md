@@ -98,7 +98,7 @@ Contexte : EW sur Windows avec **Bonjour** (obligatoire pour la télécommande),
 2. Au démarrage : résoudre le nom (DNS local du routeur DHCP / NetBIOS / mDNS) à **chaque tentative de connexion**, de sorte qu'un changement d'IP DHCP soit sans effet.
 3. Premier lancement : lancer une recherche mDNS `_ezwremote._tcp.local.` et proposer la liste des PC trouvés ; mémoriser le choix.
 4. Repli : saisie manuelle du nom ou de l'IP.
-5. À valider sur le terrain : l'annonce mDNS d'EW est-elle visible en multicast (et non seulement en unicast vers l'hôte) ? Le code actuel fait de l'unicast vers `host:5353`, ce qui prouve que le PC EW répond, mais pas qu'il annonce en multicast.
+5. **Validé (capture du 2026-10-23)** : la requête mDNS *unicast* vers `<nom-du-pc>.local:5353` fonctionne depuis le Mac vers le PC Windows, le nom `.local` se résout, et le port TCP est dynamique. Reste à valider : l'exploration en *multicast* (liste des PC EW) et le comportement DHCP (changement d'IP).
 
 ### Contrat WebSocket app → navigateur
 Un seul message JSON : `{"visible": bool, "text": str}`. Détail dans `spec/interfaces.md`.
@@ -116,6 +116,7 @@ Un seul message JSON : `{"visible": bool, "text": str}`. Détail dans `spec/inte
 ## 5. Risques techniques
 | Risque | Gravité | Parade |
 |---|---|---|
+| **`uid` inconnu refusé / appairage demandé par EW** (la capture n'a été faite qu'avec l'`uid` de la V1, EW a répondu `paired`) | Haute | Tester avec un `uid` neuf avant de figer « un `client_id` par installation » ; sinon proposer l'`uid` de la V1 par défaut |
 | EW change son protocole | Haute | Tests sur captures, versions testées dans le README, message d'erreur explicite |
 | mDNS bloqué par le réseau (VLAN, Wi-Fi invité) | Moyenne | Saisie manuelle du nom/IP en repli |
 | Antivirus / SmartScreen bloque l'exécutable non signé | Moyenne | `--onedir`, installeur, documenter ; signature de code si budget |

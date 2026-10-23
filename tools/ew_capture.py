@@ -41,7 +41,7 @@ V1_DEVICE_NAME = "ew to obs"
 EXTRA_ACTIONS = {"LiveData", "ScheduleData", "currentImage", "slideImage"}
 IMAGE_ACTIONS = {"currentImage", "slideImage"}
 KNOWN_SENT = {"connect", "heartbeat", "GetLiveData", "getSlideInfo"}
-KNOWN_RECV = {"status", "LiveData", "slideInfo", "ScheduleData", "currentImage", "slideImage"}
+KNOWN_RECV = {"paired", "status", "LiveData", "slideInfo", "ScheduleData", "currentImage", "slideImage"}
 REDACT_KEYS = {"title", "content", "device_name"}
 LIVEDATA_HEADER = struct.Struct("<lqqqlq")  # 40 octets, voir doc/protocole_easyworship.md
 LIVEDATA_SLIDE = struct.Struct("<qq")  # rowid, revision
@@ -462,13 +462,13 @@ def analyze(path, out=print):
             for k in ("error", "warning"):
                 if k in d:
                     warnings.append("t=%s : LiveData %s : %s" % (r["t"], k, d[k]))
-            known_slides = {sl["rowid"] for sl in d.get("slides", [])}
-            if d.get("unknown0") not in (None, 0) or d.get("unknown5") not in (None, 0):
-                warnings.append("t=%s : champs 'inconnus' du header non nuls : %s, %s (utile pour les comprendre)" % (r["t"], d.get("unknown0"), d.get("unknown5")))
+            known_slides = {str(sl["rowid"]) for sl in d.get("slides", [])}
+            if d.get("unknown0") not in (None, 1):  # toujours 1 dans la capture du 2026-10-23
+                warnings.append("t=%s : header LiveData : unknown0=%s (valait 1 jusqu'ici)" % (r["t"], d.get("unknown0")))
         if action == "slideInfo":
             seen_info.add(msg.get("slide_rowid"))
-            rid = msg.get("slide_rowid")
-            if rid not in (0, None) and known_slides and rid not in known_slides:
+            rid = str(msg.get("slide_rowid"))  # EW envoie les identifiants sous forme de chaînes
+            if rid not in ("0", "None") and known_slides and rid not in known_slides:
                 warnings.append("t=%s : slideInfo pour une diapo absente de LiveData (rowid=%s)" % (r["t"], rid))
             if last_status_t is not None:
                 latencies.append(r["t"] - last_status_t)
