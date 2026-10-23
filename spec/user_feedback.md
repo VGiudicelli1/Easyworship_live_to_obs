@@ -26,3 +26,5 @@ Source : retour du mainteneur (utilisateur principal) après usage de la version
 * ~~Capture de trames réelles~~ : **faites** (2026-10-23), voir `doc/protocole_easyworship.md` §7–8.
 * Le nom du PC EW est-il stable sur le réseau local (DHCP + DNS local / mDNS) ? À tester.
 * Prérequis découvert : EW exige **Bonjour** sur son PC pour activer la télécommande.
+* Appairage : durable, révocable dans EW, pas de refus possible (accepter ou laisser en attente) — information du mainteneur, 2026-10-23.
+* Diapo vide : probablement impossible dans EW ; diapo sans texte (images) possible, à capturer.

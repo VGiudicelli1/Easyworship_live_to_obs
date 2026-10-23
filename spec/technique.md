@@ -116,7 +116,7 @@ Un seul message JSON : `{"visible": bool, "text": str}`. Détail dans `spec/inte
 ## 5. Risques techniques
 | Risque | Gravité | Parade |
 |---|---|---|
-| **Appairage** : un `uid` neuf reçoit `notPaired` et attend que l'opérateur accepte la télécommande sur le PC EW (validé le 2026-10-23) | Moyenne | Un `client_id` généré par installation est viable. Afficher « En attente d'acceptation sur le PC EasyWorship », garder la connexion et les heartbeats ; conserver l'`uid` ; **à tester** : persistance côté EW après redémarrage, refus par l'opérateur, délai maximal |
+| **Appairage** : un `uid` neuf reçoit `notPaired` et attend que l'opérateur accepte (validé le 2026-10-23) ; l'appairage est durable ; l'opérateur peut le **révoquer** dans EW (connexion TCP fermée sans message) ; aucun refus explicite | Moyenne | `client_id` généré par installation et conservé. États « en attente d'acceptation » (sans expiration, heartbeats maintenus) et « connexion fermée par EW » ; reconnexion automatique avec attente progressive. **À tester** : attente prolongée sans réponse, reconnexion après révocation (`notPaired` ?) |
 | EW change son protocole | Haute | Tests sur captures, versions testées dans le README, message d'erreur explicite |
 | mDNS bloqué par le réseau (VLAN, Wi-Fi invité) | Moyenne | Saisie manuelle du nom/IP en repli |
 | Antivirus / SmartScreen bloque l'exécutable non signé | Moyenne | `--onedir`, installeur, documenter ; signature de code si budget |

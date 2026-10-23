@@ -363,51 +363,87 @@ class Session:
         return text
 
 
-def capture(host, port, out, duration, active, redact, client_id, log=print, device_name=V1_DEVICE_NAME, mdns_port=MDNS_PORT):
-    if port is None:
-        log("Recherche du port EW par mDNS sur %s:%d ..." % (host, mdns_port))
-        try:
-            port, parsed = discover_port(host, log=log, mdns_port=mdns_port)
-        except (OSError, RuntimeError, ValueError) as e:
-            log("ECHEC de la découverte mDNS : %s" % e)
-            log("Vérifiez que Bonjour est installé sur le PC EW et que la télécommande EW est activée,")
-            log("ou donnez le port avec --port.")
-            return None
-        log("Port trouvé : %d  (%s)" % (port, parsed))
-    log("Connexion à %s:%d ..." % (host, port))
-    try:
-        sock = socket.create_connection((host, port), 7)
-    except OSError as e:
-        log("ECHEC de la connexion : %s" % e)
-        return None
-    rec = Recorder(out, redact)
-    rec.write("info", msg={"host": host, "port": port, "active": active, "redact": redact, "python": sys.version.split()[0]})
-    session = Session(sock, rec, active, client_id, log, device_name)
+def capture(host, port, out, duration, active, redact, client_id, log=print, device_name=V1_DEVICE_NAME, mdns_port=MDNS_PORT, reconnect=False, retry_delay=3.0):
+    """Capture jusqu'à `duration` s (0 = Ctrl+C). Avec `reconnect`, se reconnecte après une coupure ou une révocation."""
     deadline = time.monotonic() + duration if duration else None
-    log("Connecté. Capture dans %s (Ctrl+C pour arrêter)." % out)
+    rec = None
+
+    def get_rec():
+        nonlocal rec
+        if rec is None:
+            rec = Recorder(out, redact)
+        return rec
+
+    def time_left():
+        return deadline is None or time.monotonic() < deadline
+
+    def wait_retry(reason):
+        log("%s : nouvelle tentative dans %.0f s (--reconnect)." % (reason, retry_delay))
+        get_rec().write("info", msg={"event": "retry_wait", "reason": reason})
+        end = time.monotonic() + retry_delay
+        while time.monotonic() < end and time_left():
+            time.sleep(0.1)
+
     try:
-        session.hello()
-        sock.settimeout(0.2)
-        while deadline is None or time.monotonic() < deadline:
+        while time_left():
+            cur_port = port
+            if cur_port is None:
+                log("Recherche du port EW par mDNS sur %s:%d ..." % (host, mdns_port))
+                try:
+                    cur_port, parsed = discover_port(host, log=log, mdns_port=mdns_port)
+                except (OSError, RuntimeError, ValueError) as e:
+                    log("ECHEC de la découverte mDNS : %s" % e)
+                    log("Vérifiez que Bonjour est installé sur le PC EW et que la télécommande EW est activée,")
+                    log("ou donnez le port avec --port.")
+                    if not reconnect:
+                        return None
+                    wait_retry("découverte impossible")
+                    continue
+                log("Port trouvé : %d  (%s)" % (cur_port, parsed))
+            log("Connexion à %s:%d ..." % (host, cur_port))
             try:
-                chunk = sock.recv(16384)
-                if not chunk:
-                    log("Connexion fermée par EW.")
-                    rec.write("info", msg={"event": "closed_by_peer"})
-                    break
-                session.feed(chunk)
-            except socket.timeout:
-                pass
-            session.heartbeat_if_due()
+                sock = socket.create_connection((host, cur_port), 7)
+            except OSError as e:
+                log("ECHEC de la connexion : %s" % e)
+                if not reconnect:
+                    return None
+                wait_retry("connexion impossible")
+                continue
+            r = get_rec()
+            r.write("info", msg={"event": "connected", "host": host, "port": cur_port, "active": active, "redact": redact, "python": sys.version.split()[0]})
+            session = Session(sock, r, active, client_id, log, device_name)
+            log("Connecté. Capture dans %s (Ctrl+C pour arrêter)." % out)
+            reason = None
+            try:
+                session.hello()
+                sock.settimeout(0.2)
+                while time_left():
+                    try:
+                        chunk = sock.recv(16384)
+                        if not chunk:
+                            log("Connexion fermée par EW.")
+                            r.write("info", msg={"event": "closed_by_peer"})
+                            reason = "connexion fermée par EW"
+                            break
+                        session.feed(chunk)
+                    except socket.timeout:
+                        pass
+                    session.heartbeat_if_due()
+            except OSError as e:
+                log("Erreur réseau : %s" % e)
+                r.write("info", msg={"event": "socket_error", "error": str(e)})
+                reason = "erreur réseau"
+            finally:
+                sock.close()
+            if reason is None or not reconnect:
+                break
+            wait_retry(reason)
     except KeyboardInterrupt:
         log("Arrêt demandé.")
-    except OSError as e:
-        log("Erreur réseau : %s" % e)
-        rec.write("info", msg={"event": "socket_error", "error": str(e)})
     finally:
-        sock.close()
-        rec.close()
-    return out
+        if rec is not None:
+            rec.close()
+    return out if rec is not None else None
 
 
 ###################################################################################################
@@ -455,7 +491,7 @@ def analyze(path, out=print):
         if r["dir"] == "recv" and action in EXTRA_ACTIONS and r.get("extra_len", 0) != int(msg.get("size", 0)):
             warnings.append("t=%s : %s size=%s mais %s octets reçus" % (r["t"], action, msg.get("size"), r.get("extra_len", 0)))
         if action == "status":
-            for k in ("liverev", "imagehash", "slide_rowid", "logo", "black", "clear"):
+            for k in ("liverev", "imagehash", "slide_rowid", "logo", "black", "clear", "permissions", "rectype"):
                 if k in msg:
                     status_vals[k].add(str(msg[k]))
             last_status_t = r["t"]
@@ -475,7 +511,10 @@ def analyze(path, out=print):
             if last_status_t is not None:
                 latencies.append(r["t"] - last_status_t)
 
+    events = [r for r in load(path) if r.get("dir") == "info" and r.get("msg", {}).get("event")]
     out("== %s : %d messages ==" % (path, len(recs)))
+    for r in events:
+        out("   t=%-7s événement : %s %s" % (r["t"], r["msg"]["event"], {k: v for k, v in r["msg"].items() if k in ("reason", "error", "port")} or ""))
     out("")
     out("%-5s %-14s %6s  %s" % ("sens", "action", "nb", "champs (nb d'occurrences)"))
     for (d, a), s in sorted(stats.items()):
@@ -583,6 +622,21 @@ def _fake_mdns_server(udp, tcp_port):
         pass
 
 
+def _fake_ew_revocation(listener):
+    """1re connexion : fermée par EW juste après connect (révocation). 2e : notPaired puis attente."""
+    for n in (1, 2):
+        conn, _ = listener.accept()
+        conn.settimeout(3)
+        try:
+            conn.recv(4096)
+            if n == 2:
+                conn.sendall(b'{"action":"notPaired","requestrev":"0"}\r\n')
+                time.sleep(0.6)
+        except (OSError, socket.timeout):
+            pass
+        conn.close()
+
+
 def selftest():
     ok = True
 
@@ -639,6 +693,19 @@ def selftest():
     live = next(r for r in recs if r["msg"].get("action") == "LiveData")
     check(live["decoded"]["pres_len"] == 2 and len(live["decoded"]["slides"]) == 2, "binaire LiveData décodé")
 
+    print("Test 5 : reconnexion après une fermeture par EW (révocation)")
+    lis2 = socket.socket()
+    lis2.bind(("127.0.0.1", 0))
+    lis2.listen(2)
+    threading.Thread(target=_fake_ew_revocation, args=(lis2,), daemon=True).start()
+    path2 = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "captures", "selftest_revocation.jsonl"))
+    capture("127.0.0.1", lis2.getsockname()[1], path2, 3, True, False, V1_CLIENT_ID, log=quiet, reconnect=True, retry_delay=0.3)
+    lis2.close()
+    recs2 = load(path2)
+    check(sum(1 for r in recs2 if r.get("msg", {}).get("action") == "connect") >= 2, "reconnexion automatique après la fermeture")
+    check(any(r.get("msg", {}).get("event") == "closed_by_peer" for r in recs2), "fermeture par EW enregistrée")
+    check(any(r.get("msg", {}).get("action") == "notPaired" for r in recs2), "notPaired reçu à la reconnexion")
+
     print("Test 4 : analyse du fichier")
     lines = []
     warns = analyze(path, out=lines.append)
@@ -667,6 +734,7 @@ def main(argv=None):
     p.add_argument("--redact", action="store_true", help="masque titres et contenus dans le fichier")
     p.add_argument("--client-id", default=V1_CLIENT_ID, help="uid de télécommande (défaut : celui de la V1)")
     p.add_argument("--device-name", default=V1_DEVICE_NAME, help="nom de télécommande (défaut : celui de la V1)")
+    p.add_argument("--reconnect", action="store_true", help="se reconnecter après une coupure / révocation (tests de robustesse)")
     p.add_argument("--no-analyze", action="store_true", help="ne pas analyser à la fin")
     p.add_argument("--analyze", metavar="FICHIER", help="analyser un fichier de capture existant")
     p.add_argument("--selftest", action="store_true", help="tester le script avec un faux EW local")
@@ -680,7 +748,7 @@ def main(argv=None):
     if not args.host:
         p.error("indiquez le PC EasyWorship (ou --analyze / --selftest)")
     out = args.out or os.path.join("captures", "ew_capture_%s.jsonl" % datetime.now().strftime("%Y%m%d_%H%M%S"))
-    path = capture(args.host, args.port, out, args.duration, not args.passive, args.redact, args.client_id, device_name=args.device_name)
+    path = capture(args.host, args.port, out, args.duration, not args.passive, args.redact, args.client_id, device_name=args.device_name, reconnect=args.reconnect)
     if path is None:
         return 2
     if not args.no_analyze:

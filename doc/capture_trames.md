@@ -13,6 +13,7 @@ python3 tools/ew_capture.py NOM_DU_PC_EW                  # 60 s, port découver
 python3 tools/ew_capture.py NOM_DU_PC_EW --duration 300   # 5 minutes
 python3 tools/ew_capture.py NOM_DU_PC_EW --port 51234     # si la découverte mDNS échoue
 python3 tools/ew_capture.py NOM_DU_PC_EW --redact         # masque titres et textes
+python3 tools/ew_capture.py NOM_DU_PC_EW --reconnect      # se reconnecte après coupure / révocation
 python3 tools/ew_capture.py --analyze captures/xxx.jsonl  # ré-analyser un fichier
 python3 tools/ew_capture.py --selftest                    # vérifier le script sans EW
 ```
@@ -31,6 +32,9 @@ Windows : remplacer `python3` par `py`.
 * `captures/ew_capture_AAAAMMJJ_HHMMSS.jsonl` : une ligne JSON par trame (`t`, `dir` = send/recv, `msg`, `extra_len`, `extra_b64`, `decoded` pour `LiveData`). Les images (`currentImage`, `slideImage`) ne sont enregistrées qu'en taille + empreinte SHA‑1.
 * Résumé affiché à la fin : actions vues, champs, valeurs distinctes de `status`, délais, et **points d'attention** (action inconnue, champ `size` hors liste, binaire incohérent, champs « inconnus » du header non nuls).
 * Le dossier `captures/` est ignoré par Git : les fichiers contiennent le texte des diapos. Pour partager une capture, utiliser `--redact` (le script ne masque que `title`, `content`, `device_name`) et relire le fichier avant publication.
+
+## Tester coupures et révocation
+Avec `--reconnect`, le script se reconnecte (attente 3 s) quand EW ferme la connexion ou que le réseau coupe, et continue d'écrire dans le même fichier (événements `closed_by_peer`, `retry_wait`, `connected`). À utiliser pour : couper le Wi‑Fi 10 s, quitter puis relancer EW, **révoquer** l'appairage dans EW et regarder si `notPaired` revient.
 
 ## Premier lancement avec un nouvel `uid`
 EW répond `notPaired` et affiche une demande à accepter **sur le PC EasyWorship** ; le script reste connecté (heartbeats) et un message « EN ATTENTE D'APPAIRAGE » s'affiche. Après acceptation, les données arrivent.

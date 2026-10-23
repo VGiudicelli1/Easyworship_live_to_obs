@@ -20,7 +20,7 @@ class LiveState:
 class EwClient:
     async def run(self, host: str) -> None        # boucle infinie avec reconnexion
     on_state: Callable[[LiveState], None]
-    on_status: Callable[[ConnectionStatus], None] # SEARCHING, CONNECTING, WAITING_PAIRING, CONNECTED, LOST
+    on_status: Callable[[ConnectionStatus], None] # SEARCHING, CONNECTING, WAITING_PAIRING, CONNECTED, LOST  # LOST inclut révocation de l'appairage
 ```
 
 ## 2. Application ↔ navigateur (OBS)
@@ -67,7 +67,7 @@ Règles :
 * Démarrage automatique de la connexion si un hôte est mémorisé.
 * Un seul bouton Démarrer/Arrêter si nécessaire ; sinon l'application tourne tant qu'elle est ouverte.
 * Fermeture = arrêt propre des sockets.
-* État EW : `Recherche… / Connexion… / En attente d'acceptation sur le PC EasyWorship / Connecté / Perdu (nouvel essai dans N s)`. L'état « en attente » correspond à la réponse `notPaired` d'EW (l'opérateur doit accepter la télécommande dans EW) ; la connexion reste ouverte et les heartbeats continuent.
+* État EW : `Recherche… / Connexion… / En attente d'acceptation sur le PC EasyWorship / Connecté / Perdu (nouvel essai dans N s)`. « Perdu » regroupe coupure réseau, EW fermé et **appairage révoqué** (EW ferme alors la connexion sans message) ; après une révocation l'état repasse en « en attente d'acceptation » à la reconnexion. L'état « en attente » (sans délai d'expiration) correspond à la réponse `notPaired` d'EW (l'opérateur doit accepter la télécommande dans EW) ; la connexion reste ouverte et les heartbeats continuent.
 
 ## 4. Configuration (`config.json`)
 

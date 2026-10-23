@@ -108,8 +108,27 @@ Source : `tests/fixtures/ew_session_appairage_anonymisee.jsonl` (58 s, 346 trame
 
 Conséquences :
 * Un `uid` inconnu **n'est pas refusé** : EW laisse la connexion ouverte et attend la décision de l'opérateur. Le client doit **rester connecté et continuer les heartbeats** (≥ 1 toutes les 3 s) pendant l'attente, et afficher « En attente d'acceptation sur le PC EasyWorship ».
-* Un `uid` déjà accepté reçoit `paired` immédiatement (capture du §7 avec l'`uid` de la V1). **Non vérifié** : EW mémorise-t-il durablement l'`uid` accepté (redémarrage d'EW, plusieurs jours) ? Test à faire : relancer le script avec `--client-id fb40154d-fe44-4cd8-9b87-abb34ba93fb1` (l'`uid` de cette session).
+* Un `uid` déjà accepté reçoit `paired` immédiatement (capture du §7 avec l'`uid` de la V1). **Confirmé par le mainteneur** : un appareil enregistré dans EW le reste durablement (jusqu'à révocation, voir §9).
 * Délai d'attente maximal d'EW avant refus/abandon : **inconnu** (non testé au-delà de 9 s). Cas « refusé » par l'opérateur : non testé, message attendu inconnu.
 * `device_name` est probablement le libellé montré à l'opérateur dans la demande : choisir un nom explicite (« EasyWorship vers OBS »).
 * Le port TCP de la télécommande valait **57395 dans les deux captures** (même EW, sessions différentes) : il n'est peut-être pas aussi dynamique qu'annoncé, mais ne pas s'y fier ; garder la découverte mDNS.
 * Cette capture ajoute 27 changements de présentation (111 `slideInfo`) sans écart avec le §7 : mêmes champs, mêmes types, `slideInfo` dans le désordre, aucune diapo vide, aucune diapo modifiée ; `logo`/`black`/`clear` toujours faux.
+
+## 9. Mode contrôle, révocation (3e capture, EW 7.4.1.9)
+
+Source : `tests/fixtures/ew_session_controle_revocation_anonymisee.jsonl` (24 s). Déroulé annoncé par le mainteneur : connexion d'un `uid` neuf, appairage validé sur EW, **mode contrôle activé**, **mode contrôle désactivé**, **appairage révoqué**.
+
+| t (s) | Événement observé | Interprétation |
+|---|---|---|
+| 0,009 | `notPaired` | `uid` neuf (comme §8) |
+| 8,894 | `paired` + `status` + `LiveData` + 8 `slideInfo` | appairage validé sur le PC EW |
+| 15,207 | `status` **identique** (même diapo, même `imagehash`, mêmes drapeaux) sauf **`permissions: 1`** | mode contrôle activé |
+| 20,995 | `status` identique sauf **`permissions: 0`** | mode contrôle désactivé |
+| 23,947 | **fermeture de la connexion TCP par EW, sans aucun message** (EOF, ~2,7 s après le dernier heartbeat) | appairage révoqué |
+
+Conséquences pour l'application :
+* Le champ `permissions` traduit l'état du *mode contrôle* de cette télécommande dans EW (0 / 1). L'application est en lecture seule : **elle l'ignore**. Données et mises à jour de diapos arrivent normalement avec `permissions = 0`.
+* Ce `status` « parasite » ne change ni la diapo ni les drapeaux : la détection par clé `(pres_rowid, slide_rowid, logo, black, clear)` (§7) ne doit **pas** réémettre de mise à jour, ni redemander les données, quand seul `permissions` change.
+* **Révocation = fermeture TCP silencieuse**, indiscernable à ce niveau d'une coupure réseau ou d'un redémarrage d'EW. Le client doit donc se reconnecter automatiquement (attente progressive, 1 s → 10 s) ; après une révocation il recevra vraisemblablement `notPaired` (**non capturé** : le script s'arrêtait à la fermeture ; utiliser `--reconnect`) et passera en état « en attente d'acceptation ». Message à l'opérateur proposé : « Connexion fermée par EasyWorship (appairage révoqué ou EW fermé) ».
+* Le refus d'une demande d'appairage **n'existe pas** : EW propose seulement d'accepter ou de laisser en attente (information du mainteneur). Il n'y a donc pas de message de refus à gérer ; en revanche l'**attente peut être indéfinie** : pas de délai d'expiration côté application, heartbeats maintenus. Combien de temps EW garde la connexion `notPaired` ouverte sans réponse : **non testé**.
+* Texte vide : le mainteneur pense qu'**une diapo vide n'existe pas** dans EW ; une diapo **sans texte** (images seules, etc.) est possible mais **pas encore capturée** — à confirmer ce que renvoie `slideInfo.content` (chaîne vide attendue).
