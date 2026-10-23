@@ -516,10 +516,11 @@ def analyze(path, out=print):
     same_hash, never_followed = 0, 0
     for i in range(1, len(stat)):
         a, b = stat[i - 1]["msg"], stat[i]["msg"]
-        if (a["pres_rowid"], a["slide_rowid"]) != (b["pres_rowid"], b["slide_rowid"]) and a["imagehash"] == b["imagehash"]:
+        ka, kb = (a.get("pres_rowid"), a.get("slide_rowid")), (b.get("pres_rowid"), b.get("slide_rowid"))
+        if ka != kb and a.get("imagehash") == b.get("imagehash"):
             same_hash += 1
             nxt = stat[i + 1] if i + 1 < len(stat) else None
-            if nxt is None or nxt["t"] - stat[i]["t"] > 0.5 or nxt["msg"]["imagehash"] == b["imagehash"]:
+            if nxt is None or nxt["t"] - stat[i]["t"] > 0.5 or nxt["msg"].get("imagehash") == b.get("imagehash"):
                 never_followed += 1
     out("== %s : %d messages ==" % (path, len(recs)))
     for r in events:
