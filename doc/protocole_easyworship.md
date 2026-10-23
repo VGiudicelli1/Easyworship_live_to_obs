@@ -195,7 +195,7 @@ Sources : `tests/fixtures/ew_session_coupure_wifi_anonymisee.jsonl`, `ew_session
 ### Conséquences pour le client
 1. Reconnexion : `découverte du port → connexion → connect`, **à chaque tentative** ; ne jamais réutiliser un port d'une session précédente. Première nouvelle tentative **immédiate**, puis attente progressive (0,5 s → 10 s) pour que les micro-coupures se rétablissent en moins de 2 s (voir `spec/technique.md`).
 2. Un `notPaired` ne doit pas déclencher de nouvelle tentative : rester connecté et envoyer les heartbeats (§8).
-3. L'application ne lit que le texte des diapos : **ne pas demander le titre (`slide_rowid 0`)**, cela évite un aller-retour qui peut rester sans réponse. Demander d'abord la diapo courante, puis les autres pour que la navigation soit instantanée.
+3. L'application ne lit que le texte des diapos : **ne pas demander le titre (`slide_rowid 0`)**, cela évite un aller-retour qui peut rester sans réponse. Demander toutes les diapos d'un coup (EW répond dans son propre ordre, §13) pour que la navigation soit instantanée.
 
 ## 12. Reconnexion réelle et IPv6 (10e capture, `--reconnect`, 274 s)
 
@@ -216,3 +216,13 @@ Constats :
 * **Pas d'IPv6 côté EW** (observé par le mainteneur : « en IPv6, ça ne marche jamais ; l'IPv4 marche du premier coup ») : une tentative de découverte qui échoue a pris **≈ 29 s** (68,7 s → 100,9 s, moins 3 s d'attente) car la découverte du script interrogeait les adresses **une par une**, 2 essais × 3 s chacune. Idem côté TCP avec `socket.create_connection` de la V1 (7 s par adresse injoignable, sans ordre IPv4/IPv6). Les durées de 27,6 s et 70,9 s entre fermeture et reconnexion contiennent aussi le temps où EW n'était pas disponible : elles ne mesurent pas le délai de reconnexion seul.
 * Correction faite dans `tools/ew_capture.py` : requête mDNS envoyée **en parallèle** à toutes les adresses (la première réponse gagne), **IPv4 d'abord**, connexion TCP à l'IP qui a répondu (sinon IPv4 d'abord) avec 3 s par adresse et 10 s au total. Les fichiers de capture enregistrent désormais `discovery_s`, `connect_s` et `address`, ainsi que les échecs (`discovery_failed`, `connect_failed`) avec leur durée.
 * Règle pour l'application : **IPv4 d'abord, IPv6 en dernier recours seulement** ; ne jamais enchaîner des délais par adresse ; viser une découverte + connexion < 1 s quand EW est là, et un échec franc en < 5 s quand il est absent (pour que la tentative suivante parte vite).
+
+## 13. Grosse présentation : 150 diapos (11e capture, EW 7.4.1.9)
+
+Source : `tests/fixtures/ew_session_150_diapos.jsonl` (présentation de test « lorem ipsum (150) », conservée telle quelle : texte factice).
+
+* `LiveData` = **2 440 octets** (= 40 + 150 × 16) reçus d'un bloc ; 150 `getSlideInfo` envoyés en rafale (≈ 0,5 ms au total) ; **les 151 réponses** (150 diapos + titre) sont arrivées en **0,18 s**, sans perte ni doublon.
+* **EW répond dans son propre ordre**, pas dans l'ordre des requêtes : la diapo courante est arrivée en 38e position (+52 ms). Demander la diapo courante en premier ne garantit donc pas qu'elle revienne en premier ; inutile d'optimiser, tout demander d'un coup suffit.
+* Contenu : jusqu'à **987 caractères** sur une seule ligne (sans `\r\n`) : le texte est retourné à la ligne par l'affichage. La page OBS doit rester lisible avec ce volume (taille de police calculée par dichotomie).
+* Navigation dans la présentation : un seul `status` par diapo, aucune requête supplémentaire ; mêmes combinaisons `logo`/`black`/`clear` que précédemment (17 changements de diapo, toutes les combinaisons testées).
+* **Limite non testée** : au-delà de ~1 000 diapos le `LiveData` dépasse 16 384 octets (taille de lecture) et peut arriver en plusieurs segments TCP. Le décodeur de trames doit de toute façon traiter les messages **incomplets** (accumulation jusqu'à `size` octets) ; à couvrir par un test unitaire avec un message découpé en morceaux arbitraires.

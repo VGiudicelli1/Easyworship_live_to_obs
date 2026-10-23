@@ -116,7 +116,7 @@ Un seul message JSON : `{"visible": bool, "text": str}`. Détail dans `spec/inte
 1. L'état de sortie est `(visible, text)` avec `visible = not (logo or black or clear)` et `text` = contenu de la diapo `(pres_rowid, slide_rowid)` du dernier `status`, normalisé `\r\n` → `\n`.
 2. Il est **recalculé** à chaque `status` et à chaque `slideInfo`/`LiveData` reçu, puis diffusé **seulement s'il a changé** (les `status` répétés, ceux où seuls `permissions`/`schedulerev` bougent, et le double `status` d'un changement de diapo ne produisent rien).
 3. Un texte vide est un état valide (diapo vide ou sans texte). **Rien en direct** (`imagehash` vide, ou `slide_rowid` absent du dernier `LiveData`) ⇒ `visible = false`, texte vide.
-4. Nouveau `liverev` ⇒ **vider le cache des diapos** puis tout recharger (`GetLiveData`, `getSlideInfo`) ; les `slide_rowid` des chants (`pres_rowid = "0"`, identifiants négatifs) ne sont valables que pour un `liverev`. En attendant les `slideInfo` manquants, ne pas diffuser de texte périmé. Ne pas demander le titre (`slide_rowid 0`). Demander la diapo courante en premier.
+4. Nouveau `liverev` ⇒ **vider le cache des diapos** puis tout recharger (`GetLiveData`, `getSlideInfo`) ; les `slide_rowid` des chants (`pres_rowid = "0"`, identifiants négatifs) ne sont valables que pour un `liverev`. En attendant les `slideInfo` manquants, ne pas diffuser de texte périmé. Ne pas demander le titre (`slide_rowid 0`). Tout demander d'un coup (150 diapos en 0,2 s, EW répond dans son ordre).
 5. Ne dépendre ni de `imagehash`, ni de `rectype`, ni de `slide_no`/`pres_no`.
 
 ## 4. Exigences non fonctionnelles
