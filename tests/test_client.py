@@ -235,3 +235,20 @@ def test_enable_keepalive_sets_so_keepalive_and_never_raises():
             assert sock.getsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL) == 4
     finally:
         sock.close()
+
+
+def test_published_states_are_logged_without_the_text(caplog):
+    import logging
+
+    async def scenario():
+        ew = FakeEw()
+        await ew.start()
+        await ew.go_live({1: "Texte confidentiel des paroles"}, current=1)
+        async with Harness(ew) as h:
+            await h.until(lambda: h.states == [LiveState(True, "Texte confidentiel des paroles")])
+        await ew.stop()
+
+    with caplog.at_level(logging.INFO, logger="ew_to_obs.client"):
+        run(scenario())
+    assert "état publié : visible=True, 30 caractères" in caplog.text
+    assert "confidentiel" not in caplog.text

@@ -287,6 +287,8 @@ class EwClient:
         if state == self.published:
             return
         self.published = state
+        # jamais le texte : le journal peut être joint à un rapport (recette, diagnostic)
+        log.info("état publié : visible=%s, %d caractères", state.visible, len(state.text))
         if self._on_state is not None:
             self._on_state(state)
 

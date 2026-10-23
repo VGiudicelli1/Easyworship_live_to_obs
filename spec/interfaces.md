@@ -88,31 +88,44 @@ Règles :
 * Fermeture = arrêt propre des sockets.
 * État EW : `Recherche… / Connexion… / En attente d'acceptation sur le PC EasyWorship / Connecté / Perdu (nouvel essai dans N s)`. « Perdu » regroupe coupure réseau, EW fermé et **appairage révoqué** (EW ferme alors la connexion sans message) ; après une révocation l'état repasse en « en attente d'acceptation » à la reconnexion. L'état « en attente » (sans délai d'expiration) correspond à la réponse `notPaired` d'EW (l'opérateur doit accepter la télécommande dans EW) ; la connexion reste ouverte et les heartbeats continuent.
 
-## 4. Configuration (`config.json`)
+## 4. Configuration (`config.json`) — implémentée
 
-Emplacement : dossier de configuration utilisateur de l'OS (voir `spec/technique.md`).
+Dossier de configuration de l'OS (`~/Library/Application Support/ew_to_obs/` sur macOS, `%APPDATA%\ew_to_obs\` sous Windows, `~/.config/ew_to_obs/` sous Linux ; `EW_TO_OBS_CONFIG_DIR` ou `--config-dir` pour le remplacer). Jamais dans le dossier d'installation. Le même dossier contient `ew_to_obs.log`.
 
 ```json
 {
   "version": 1,
   "ew_host": "PC-REGIE",
-  "last_ip": "<dernière IPv4 qui a fonctionné, tentée en premier>",
+  "last_ip": "192.168.1.78",
+  "client_id": "0b6c0f3e-…",
+  "device_name": "EasyWorship vers OBS",
   "web_port": 8000,
   "web_bind": "127.0.0.1",
-  "client_id": "<uuid généré au premier lancement, conservé : c'est l'identité appairée dans EW>",
-  "device_name": "EasyWorship vers OBS",
-  "lost_grace_seconds": 2,
-  "autostart": false
+  "lost_grace_seconds": 2.0
 }
 ```
 
-* Valeurs par défaut sûres si le fichier est absent ou corrompu (le fichier fautif est renommé `.bak`, jamais bloquant).
-* `ew_host` accepte un nom ou une IP.
+| Champ | Rôle | Mémorisé par |
+|---|---|---|
+| `ew_host` | nom (ou IPv4) du PC EW | `--host` (la dernière IP est alors oubliée) |
+| `last_ip` | dernière IPv4 qui a fonctionné, tentée en premier | automatique |
+| `client_id` | identité de la télécommande appairée dans EW, **générée une fois** | automatique (`--client-id` pour la changer) |
+| `device_name` | nom montré à l'opérateur dans EW | `--device-name` |
+| `web_port`, `web_bind`, `lost_grace_seconds` | valeurs durables, **modifiables à la main** | `--web-port`, `--web-bind`, `--grace` ne valent que pour le lancement |
 
-## 5. Ligne de commande (utile pour les tests et un service)
+* Fichier absent : valeurs par défaut, identité générée et **écrite dès le premier lancement** (sinon l'appairage serait perdu).
+* Chaque champ invalide reprend sa valeur par défaut (avertissement dans le journal) ; un fichier illisible est renommé `config.json.bak` et l'application démarre avec les valeurs par défaut — **la télécommande est alors à ré-accepter dans EW**.
+* Écriture atomique (fichier temporaire puis remplacement), droits `600` ; dossier non inscriptible : avertissement, l'application continue.
+
+## 5. Ligne de commande
 
 ```
-ew_to_obs [--host NOM] [--port 8000] [--headless] [--config CHEMIN] [--log-level info]
+python -m ew_to_obs --host NOM_DU_PC_EW --serve     # 1er lancement : le PC EW est mémorisé
+python -m ew_to_obs --serve                         # ensuite : rien à saisir
 ```
 
-`--headless` : pas d'UI, utile pour tests et déploiement sans écran.
+Options : `--host`, `--client-id`, `--device-name` (mémorisés) ; `--port` (diagnostic), `--grace`, `--web-port`, `--web-bind` (ce lancement seulement) ; `--serve` (page pour OBS) ; `--config-dir`, `--show-config` (lecture seule), `-v`. Sans `--serve`, une ligne JSON `{"visible":…, "text":…}` par changement d'état sur la sortie standard. Codes de sortie : 0 normal, 2 pas de PC EW connu ou port web occupé.
+
+## 5b. Journal
+
+`ew_to_obs.log` (1 Mo × 3) : connexions, états, erreurs et **une ligne par état publié** (`visible=…, N caractères`). **Jamais le texte des diapos.**

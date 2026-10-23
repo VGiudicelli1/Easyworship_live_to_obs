@@ -24,15 +24,16 @@ Objectif : **une seule application**, simple, qui se souvient du PC EasyWorship,
 
 ## Développement
 
-Étapes 1 et 2 du [plan](doc/plan_de_migration.md) : le **client EasyWorship** et le **serveur web avec la page pour OBS** (`src/ew_to_obs/`) sont écrits et testés ; la configuration, l'interface et le packaging restent à faire.
+Étapes 1 à 3 du [plan](doc/plan_de_migration.md) : le **client EasyWorship**, le **serveur web avec la page pour OBS** et la **configuration mémorisée** (`src/ew_to_obs/`) sont écrits et testés **sans EasyWorship ni OBS réels** ; l'interface et le packaging restent à faire. Tout ce qui reste à valider avec le vrai matériel est dans **[doc/recette.md](doc/recette.md)**.
 
 ```
 python -m venv venv && source venv/bin/activate     # Windows : venv\Scripts\activate
 pip install -e ".[dev]"
-python -m pytest            # 104 tests (+ 18 dans un vrai navigateur si Playwright est installé)
+python -m pytest            # 154 tests (+ 18 dans un vrai navigateur si Playwright est installé)
 ruff check src tests && ruff format --check src tests
-python -m ew_to_obs --host NOM_OU_IP_DU_PC_EW            # affiche une ligne JSON à chaque changement de diapo
-python -m ew_to_obs --host NOM_OU_IP_DU_PC_EW --serve    # + sert la page pour OBS sur http://localhost:8000/
+python -m ew_to_obs --host NOM_OU_IP_DU_PC_EW --serve    # 1er lancement : mémorise le PC EW, sert la page sur http://localhost:8000/
+python -m ew_to_obs --serve                              # ensuite : plus rien à saisir (config + journal dans le dossier de l'OS)
+python -m ew_to_obs --host NOM_OU_IP_DU_PC_EW            # sans --serve : une ligne JSON par changement de diapo
 ```
 
 Sous-titres sur les scènes caméra d'OBS (cas d'usage prévu) :
@@ -48,6 +49,7 @@ La scène OBS qui montre le live d'EasyWorship en plein écran n'est pas concern
 | `protocol.py` | trames (CRLF + octets joints), messages, binaire de `LiveData` |
 | `live.py` | logique pure : messages d'EW → état `(visible, texte)` |
 | `discovery.py` | résolution IPv4, port par mDNS (parallèle), connexion TCP |
+| `config.py`, `logs.py` | configuration JSON dans le dossier de l'OS (identité, PC EW, dernière IP), journal tournant sans texte de diapo |
 | `client.py` | boucle asynchrone : appairage, reconnexion, délai de grâce de 2 s, heartbeats, keepalive |
 | `web.py` + `public/` | serveur `aiohttp` (page + WebSocket) ; page sans CDN, texte brut, taille de police ajustée à la zone |
 

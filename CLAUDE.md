@@ -26,9 +26,12 @@ Documentation, commentaires et messages de commit en **français** ; identifiant
 
 ## Commandes
 * Installer : `pip install -e ".[dev]"` · Tests : `python -m pytest` · Lint : `ruff check src tests && ruff format --check src tests`
-* Lancer le client seul : `python -m ew_to_obs --host NOM_OU_IP` (une ligne JSON par changement d'état) ; avec la page pour OBS : ajouter `--serve` (`--web-port`, `--web-bind`)
-* Code : `src/ew_to_obs/` (`protocol`, `live`, `discovery`, `client`, `web`, `public/`) ; tests : `tests/` (fixtures réelles anonymisées dans `tests/fixtures/`, faux EW dans `tests/fake_ew.py`). `tools/ew_capture.py` reste un outil autonome (code mDNS volontairement dupliqué).
+* Lancer : `python -m ew_to_obs --host NOM_OU_IP --serve` (1er lancement, le PC EW est mémorisé), puis `python -m ew_to_obs --serve` ; sans `--serve` : une ligne JSON par changement d'état. Configuration et journal : dossier de l'OS (`--config-dir`, `--show-config`)
+* Code : `src/ew_to_obs/` (`protocol`, `live`, `discovery`, `client`, `web`, `public/`, `config`, `logs`) ; tests : `tests/` (fixtures réelles anonymisées dans `tests/fixtures/`, faux EW dans `tests/fake_ew.py`). `tools/ew_capture.py` reste un outil autonome (code mDNS volontairement dupliqué).
 * Build : voir `doc/build_et_installation.md`
+
+## Recette
+Tout ce qui n'a jamais été vérifié avec le vrai EasyWorship/OBS est listé dans `doc/recette.md` (tests R-xx, hypothèses H1–H11). Tenir ce document à jour à chaque nouvelle fonction : nouvelle hypothèse non vérifiable en local ⇒ nouveau test de recette.
 
 ## Questions ouvertes
 Voir `doc/plan_de_migration.md` (questions restantes : cas non capturés, persistance de l'appairage, fonctions optionnelles).
