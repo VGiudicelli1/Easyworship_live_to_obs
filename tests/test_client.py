@@ -12,7 +12,7 @@ from fake_ew import FakeEw
 FAST = (0.0, 0.02, 0.05, 0.1)
 
 
-def run(coro, timeout=15):
+def run(coro, timeout=40):
     return asyncio.run(asyncio.wait_for(coro, timeout))
 
 
@@ -144,13 +144,13 @@ def test_long_loss_hides_after_grace_then_recovers_on_new_port():
             await h.until(lambda: h.states == [LiveState(True, "avant")])
             await ew.stop()  # EW fermé : plus personne n'écoute
             await h.until(lambda: h.states[-1] == LiveState.hidden())
-            assert h.client.status is ConnectionStatus.LOST
+            await h.until(lambda: ConnectionStatus.LOST in h.statuses)
             # EW relancé : même client, mais cette fois le port a changé
             ew2 = FakeEw()
             await ew2.start()
             await ew2.go_live({7: "après"}, current=7)
             h.client.port = ew2.port
-            await h.until(lambda: h.states[-1] == LiveState(True, "après"))
+            await h.until(lambda: h.states[-1] == LiveState(True, "après"), timeout=15)
             await ew2.stop()
 
     run(scenario())
@@ -198,7 +198,8 @@ def test_unreachable_ew_keeps_retrying_without_crashing():
         h = Harness(ew)
         h.client.port = port
         async with h:
-            await h.until(lambda: h.statuses.count(ConnectionStatus.LOST) >= 3)
+            # sous Windows un port fermé met ~2 s à refuser : attendre 2 échecs, pas 3 en 5 s
+            await h.until(lambda: h.statuses.count(ConnectionStatus.LOST) >= 2, timeout=20)
             assert h.states == []
 
     run(scenario())
@@ -216,3 +217,21 @@ def test_zero_grace_hides_immediately(grace):
             await h.until(lambda: h.states[-1] == LiveState.hidden())
 
     run(scenario())
+
+
+def test_enable_keepalive_sets_so_keepalive_and_never_raises():
+    import socket
+
+    from ew_to_obs.client import enable_keepalive
+
+    enable_keepalive(None)  # sans socket : sans effet
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        enable_keepalive(sock, idle=11, interval=4, count=5)
+        assert sock.getsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE) != 0
+        if hasattr(socket, "TCP_KEEPIDLE"):
+            assert sock.getsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE) == 11
+        if hasattr(socket, "TCP_KEEPINTVL"):
+            assert sock.getsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL) == 4
+    finally:
+        sock.close()

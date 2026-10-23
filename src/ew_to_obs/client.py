@@ -16,6 +16,7 @@ import contextlib
 import logging
 import socket
 import sys
+import warnings
 from collections.abc import Awaitable, Callable, Sequence
 from enum import Enum
 
@@ -63,6 +64,18 @@ class Backoff:
         self._index = 0
 
 
+def _windows_keepalive(sock: socket.socket, idle: int, interval: int) -> None:
+    """Repli pour Windows sans constantes TCP_KEEP* : SIO_KEEPALIVE_VALS, sur un doublon du socket
+    (le socket d'asyncio n'expose pas `ioctl`). Les réglages portent sur la même connexion."""
+    real = sock.dup()
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            real.ioctl(socket.SIO_KEEPALIVE_VALS, (1, idle * 1000, interval * 1000))  # type: ignore[attr-defined]
+    finally:
+        real.close()
+
+
 def enable_keepalive(
     sock: socket.socket | None, idle: int = 10, interval: int = 3, count: int = 3
 ) -> None:
@@ -71,13 +84,13 @@ def enable_keepalive(
         return
     try:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
-        if sys.platform == "win32":
-            sock.ioctl(socket.SIO_KEEPALIVE_VALS, (1, idle * 1000, interval * 1000))  # type: ignore[attr-defined]
-            return
-        if hasattr(socket, "TCP_KEEPIDLE"):  # Linux
+        if hasattr(socket, "TCP_KEEPIDLE"):  # Linux, Windows récent
             sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, idle)
         elif hasattr(socket, "TCP_KEEPALIVE"):  # macOS
             sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPALIVE, idle)
+        elif sys.platform == "win32":
+            _windows_keepalive(sock, idle, interval)
+            return
         if hasattr(socket, "TCP_KEEPINTVL"):
             sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, interval)
         if hasattr(socket, "TCP_KEEPCNT"):
