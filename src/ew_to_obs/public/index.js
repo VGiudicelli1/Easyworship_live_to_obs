@@ -5,6 +5,7 @@ const box = document.getElementById("text");
 const params = new URLSearchParams(location.search);
 const MIN_FONT_PX = 8;
 let maxFontPx = Infinity;
+let referenceLines = 0; // ?lines=N : taille stable jusqu'à N lignes (voir fit)
 
 // --- réglages par l'URL (valeurs validées : jamais de contenu injecté tel quel dans le CSS) ---
 function applyParams() {
@@ -34,6 +35,8 @@ function applyParams() {
   if (valign) css.setProperty("--valign", valign);
   const max = parseFloat(params.get("max"));
   if (Number.isFinite(max) && max > 0) maxFontPx = max;
+  const lines = parseFloat(params.get("lines"));
+  if (Number.isFinite(lines) && lines >= 1) referenceLines = lines;
 }
 
 // --- taille de police : la plus grande qui tient dans la zone (recherche dichotomique) ---
@@ -41,10 +44,18 @@ function overflows(element) {
   return element.scrollHeight > element.clientHeight + 1 || element.scrollWidth > element.clientWidth + 1;
 }
 
+// Avec ?lines=N : la police ne dépasse jamais celle qui fait tenir N lignes dans la zone. Les textes
+// de moins de N lignes gardent donc la même taille ; au-delà de N lignes elle diminue.
+function linesCap() {
+  if (!referenceLines) return Infinity;
+  const padding = parseFloat(getComputedStyle(box).paddingTop) * 2;
+  return Math.max(MIN_FONT_PX, (stage.clientHeight - padding) / (referenceLines * 1.2));
+}
+
 function fit() {
   if (box.hidden) return;
   let low = MIN_FONT_PX;
-  let high = Math.max(MIN_FONT_PX, Math.min(maxFontPx, stage.clientHeight));
+  let high = Math.max(MIN_FONT_PX, Math.min(maxFontPx, linesCap(), stage.clientHeight));
   for (let i = 0; i < 16 && high - low > 0.5; i++) {
     const middle = (low + high) / 2;
     box.style.fontSize = middle + "px";

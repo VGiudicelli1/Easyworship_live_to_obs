@@ -46,6 +46,7 @@ URL à saisir dans OBS : `http://localhost:<port>/` (application sur le Mac d'OB
 | `valign` | `top`, `middle`, `bottom` (ex. bandeau en bas : `?valign=bottom`) | `middle` |
 | `font` | famille de police (lettres, chiffres, espaces, virgules, guillemets) | police système + emojis |
 | `max` | taille de police maximale (px) | taille de la zone |
+| `lines` | taille **stable** : la police ne dépasse pas celle qui fait tenir N lignes (ex. `lines=4` : un texte de 2 ou 4 lignes garde la même taille, au-delà elle diminue) | désactivé (taille ajustée à chaque diapo) |
 | `demo` | `?demo=1` ou `?demo=Mon%20texte` : aperçu du style sans application (aucun WebSocket) | — |
 
 Le texte est affiché en **texte brut** (`textContent`, jamais de HTML), à la plus grande taille de police qui tient dans la zone (8 px minimum ; en dessous le texte est coupé mais ne sort jamais de l'écran), recalculée à chaque changement et à chaque redimensionnement. Le fond de la page reste transparent. Si le WebSocket est perdu, la page masque le texte et se reconnecte seule (délai 0,5 s doublé jusqu'à 5 s).

@@ -29,13 +29,13 @@ Objectif : **une seule application**, simple, qui se souvient du PC EasyWorship,
 ```
 python -m venv venv && source venv/bin/activate     # Windows : venv\Scripts\activate
 pip install -e ".[dev]"
-python -m pytest            # 104 tests (+ 16 dans un vrai navigateur si Playwright est installé)
+python -m pytest            # 104 tests (+ 18 dans un vrai navigateur si Playwright est installé)
 ruff check src tests && ruff format --check src tests
 python -m ew_to_obs --host NOM_OU_IP_DU_PC_EW            # affiche une ligne JSON à chaque changement de diapo
 python -m ew_to_obs --host NOM_OU_IP_DU_PC_EW --serve    # + sert la page pour OBS sur http://localhost:8000/
 ```
 
-Dans OBS : *Sources → + → Navigateur*, coller `http://localhost:8000/`, largeur et hauteur de la scène (ex. 1920 × 1080). Le fond reste transparent. Réglages par l'URL (`?valign=bottom&bg=rgba(0,0,0,.65)&color=white…`) : voir [spec/interfaces.md](spec/interfaces.md) ; `?demo=1` pour régler le style sans application. Tests dans un navigateur : `pip install -e ".[dev,browser]" && playwright install chromium`.
+Dans OBS : *Sources → + → Navigateur*, coller `http://localhost:8000/`, largeur et hauteur de la scène (ex. 1920 × 1080). Le fond reste transparent. Réglages par l'URL (`?valign=bottom&bg=rgba(0,0,0,.65)&color=white…`) : voir [spec/interfaces.md](spec/interfaces.md) ; `?lines=4` pour une taille de texte stable entre les diapos (voir [spec/interfaces.md](spec/interfaces.md)) ; `?demo=1` pour régler le style sans application. Tests dans un navigateur : `pip install -e ".[dev,browser]" && playwright install chromium`.
 
 | Module | Rôle |
 |---|---|

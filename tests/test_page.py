@@ -260,3 +260,33 @@ def test_page_hides_when_the_application_stops_and_comes_back_when_it_restarts(b
     server.start(port)
     shown(page, "après le redémarrage")  # le navigateur s'est reconnecté tout seul
     page.close()
+
+
+def _lines(n):
+    return "\n".join("Ligne %d : Que précieux est ton amour pour nous" % (i + 1) for i in range(n))
+
+
+def _font_for(page, server, n):
+    server.publish(LiveState(True, _lines(n)))
+    shown(page, _lines(n))
+    m = metrics(page)
+    assert not m["overflow"], m
+    return m["font"]
+
+
+def test_typical_two_to_eight_line_texts_fit_a_subtitle_band_and_stay_readable(browser, server):
+    page = open_page(browser, server, width=1920, height=360)  # source OBS en bandeau
+    sizes = {n: _font_for(page, server, n) for n in (2, 4, 6, 8)}
+    assert sizes[2] > sizes[4] > sizes[6] > sizes[8] >= 25, sizes
+    page.close()
+
+
+def test_fixed_size_option_keeps_the_same_font_up_to_n_lines(browser, server):
+    page = open_page(browser, server, "?lines=4", 1920, 360)
+    sizes = {n: _font_for(page, server, n) for n in (2, 3, 4, 8)}
+    assert abs(sizes[2] - sizes[4]) < 1 and abs(sizes[3] - sizes[4]) < 1, sizes  # stable jusqu'à 4
+    assert sizes[8] < sizes[4] - 10, sizes  # puis diminue pour que tout tienne
+    page.close()
+    page = open_page(browser, server, "?lines=pasunnombre", 1920, 360)  # valeur invalide ignorée
+    assert _font_for(page, server, 2) > _font_for(page, server, 4)
+    page.close()
