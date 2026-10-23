@@ -35,6 +35,9 @@ from datetime import datetime
 
 MDNS_PORT = 5353
 MDNS_SERVICE = "_ezwremote._tcp.local"
+# Identité de la V1 (src_v1/ew_api.py) : EW connaît peut-être déjà cette télécommande.
+V1_CLIENT_ID = "a164e834-fc66-4cff-8e47-aa904ee9e62b"
+V1_DEVICE_NAME = "ew to obs"
 EXTRA_ACTIONS = {"LiveData", "ScheduleData", "currentImage", "slideImage"}
 IMAGE_ACTIONS = {"currentImage", "slideImage"}
 KNOWN_SENT = {"connect", "heartbeat", "GetLiveData", "getSlideInfo"}
@@ -107,19 +110,76 @@ def parse_mdns_response(data):
     return result
 
 
-def discover_port(host, timeout=3.0):
-    family, _, _, _, addr = socket.getaddrinfo(host, MDNS_PORT, 0, socket.SOCK_DGRAM)[0]
-    with socket.socket(family, socket.SOCK_DGRAM) as s:
-        s.settimeout(timeout)
-        s.sendto(build_mdns_query(), (addr[0], MDNS_PORT))
-        data, _ = s.recvfrom(9000)
-    parsed = parse_mdns_response(data)
-    if not parsed["srv"]:
-        raise RuntimeError("réponse mDNS sans enregistrement SRV : %r" % parsed)
-    for owner, port, _target in parsed["srv"]:
-        if owner in parsed["ptr"]:
-            return port, parsed
-    return parsed["srv"][0][1], parsed
+def _discover_dnspython(host, mdns_port, timeout, log):
+    """Même principe que ew_api.py (V1) : dnspython, toutes les adresses de l'hôte comme serveurs."""
+    import dns.exception
+    import dns.message
+    import dns.rdataclass
+    import dns.rdatatype
+    import dns.resolver
+
+    resolver = dns.resolver.Resolver(configure=False)
+    resolver.nameservers = [a[4][0] for a in socket.getaddrinfo(host, MDNS_PORT, proto=socket.IPPROTO_UDP)]
+    resolver.port = mdns_port
+    resolver.timeout = timeout
+    log("  [dnspython] serveurs interrogés : %s (port %d)" % (resolver.nameservers, mdns_port))
+    resolution = resolver.resolve(MDNS_SERVICE + ".", rdtype=dns.rdatatype.PTR)
+    srv_name = resolution.rrset[0].target
+    rrset = resolution.response.find_rrset(dns.message.ADDITIONAL, srv_name, dns.rdataclass.IN, dns.rdatatype.SRV)
+    return rrset[0].port, {"ptr": [str(srv_name)], "methode": "dnspython"}
+
+
+def _discover_manual(host, mdns_port, timeout, log, attempts=2):
+    """Repli sans dépendance : requête mDNS unicast vers chaque adresse de l'hôte."""
+    infos = socket.getaddrinfo(host, mdns_port, 0, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    seen, errors = set(), []
+    for family, _, _, _, addr in infos:
+        if addr in seen:
+            continue
+        seen.add(addr)
+        for attempt in range(attempts):
+            query_id = int.from_bytes(os.urandom(2), "big") or 1
+            query = struct.pack(">HHHHHH", query_id, 0x0100, 1, 0, 0, 0)  # RD, comme dnspython
+            query += _encode_name(MDNS_SERVICE) + struct.pack(">HH", 12, 1)
+            log("  [manuel] requête PTR vers %s (essai %d)" % (addr[0], attempt + 1))
+            try:
+                with socket.socket(family, socket.SOCK_DGRAM) as s:
+                    s.settimeout(timeout)
+                    s.sendto(query, addr)
+                    end = time.monotonic() + timeout
+                    while time.monotonic() < end:
+                        data, src = s.recvfrom(9000)
+                        try:
+                            parsed = parse_mdns_response(data)
+                        except (ValueError, struct.error, IndexError):
+                            continue
+                        if not parsed["srv"]:
+                            continue
+                        parsed["methode"] = "manuel"
+                        for owner, port, _target in parsed["srv"]:
+                            if owner in parsed["ptr"]:
+                                return port, parsed
+                        return parsed["srv"][0][1], parsed
+            except socket.timeout:
+                errors.append("%s : pas de réponse en %.0f s" % (addr[0], timeout))
+            except OSError as e:
+                errors.append("%s : %s" % (addr[0], e))
+                break
+    raise RuntimeError("; ".join(errors) or "aucune réponse")
+
+
+def discover_port(host, timeout=3.0, log=print, mdns_port=MDNS_PORT):
+    """Trouve le port TCP de la télécommande. dnspython (comme la V1) si installé, sinon repli manuel."""
+    try:
+        import dns.resolver  # noqa: F401
+    except ImportError:
+        log("  dnspython absent : requête mDNS manuelle (pip install dnspython pour le comportement exact de la V1)")
+    else:
+        try:
+            return _discover_dnspython(host, mdns_port, timeout, log)
+        except Exception as e:  # noqa: BLE001 - on veut tout rapporter puis tenter le repli
+            log("  [dnspython] échec : %s: %s" % (type(e).__name__, e))
+    return _discover_manual(host, mdns_port, timeout, log)
 
 
 ###################################################################################################
@@ -195,11 +255,12 @@ def decode_livedata(extra):
 
 
 class Session:
-    def __init__(self, sock, recorder, active, client_id, log):
+    def __init__(self, sock, recorder, active, client_id, log, device_name=V1_DEVICE_NAME):
         self.sock = sock
         self.rec = recorder
         self.active = active
         self.client_id = client_id
+        self.device_name = device_name
         self.log = log
         self.buf = b""
         self.requestrev = 0
@@ -215,7 +276,7 @@ class Session:
         self.log(">> " + self._summary(msg))
 
     def hello(self):
-        self.send({"device_type": 0, "action": "connect", "uid": self.client_id, "device_name": "ew capture"})
+        self.send({"device_type": 0, "action": "connect", "uid": self.client_id, "device_name": self.device_name})
 
     def heartbeat_if_due(self):
         if time.monotonic() - self.last_tx > HEARTBEAT_EVERY:
@@ -300,11 +361,11 @@ class Session:
         return text
 
 
-def capture(host, port, out, duration, active, redact, client_id, log=print):
+def capture(host, port, out, duration, active, redact, client_id, log=print, device_name=V1_DEVICE_NAME, mdns_port=MDNS_PORT):
     if port is None:
-        log("Recherche du port EW par mDNS sur %s:%d ..." % (host, MDNS_PORT))
+        log("Recherche du port EW par mDNS sur %s:%d ..." % (host, mdns_port))
         try:
-            port, parsed = discover_port(host)
+            port, parsed = discover_port(host, log=log, mdns_port=mdns_port)
         except (OSError, RuntimeError, ValueError) as e:
             log("ECHEC de la découverte mDNS : %s" % e)
             log("Vérifiez que Bonjour est installé sur le PC EW et que la télécommande EW est activée,")
@@ -319,7 +380,7 @@ def capture(host, port, out, duration, active, redact, client_id, log=print):
         return None
     rec = Recorder(out, redact)
     rec.write("info", msg={"host": host, "port": port, "active": active, "redact": redact, "python": sys.version.split()[0]})
-    session = Session(sock, rec, active, client_id, log)
+    session = Session(sock, rec, active, client_id, log, device_name)
     deadline = time.monotonic() + duration if duration else None
     log("Connecté. Capture dans %s (Ctrl+C pour arrêter)." % out)
     try:
@@ -498,6 +559,28 @@ def _fake_ew(listener, done):
         conn.close()
 
 
+def _fake_mdns_response(query, tcp_port):
+    """Réponse mDNS « legacy unicast » : écho de l'id et de la question, PTR + SRV (noms compressés)."""
+    pkt = query[:2] + struct.pack(">HHHHH", 0x8400, 1, 1, 0, 1) + query[12:]
+    inst = bytes([8]) + b"PC-REGIE" + b"\xc0\x0c"  # pointeur vers le nom du service (offset 12)
+    pkt += b"\xc0\x0c" + struct.pack(">HHIH", 12, 1, 120, len(inst))
+    inst_off = len(pkt)
+    pkt += inst
+    srv = struct.pack(">HHH", 0, 0, tcp_port) + _encode_name("PC-REGIE.local")
+    pkt += struct.pack(">H", 0xC000 | inst_off) + struct.pack(">HHIH", 33, 1, 120, len(srv)) + srv
+    return pkt
+
+
+def _fake_mdns_server(udp, tcp_port):
+    udp.settimeout(5)
+    try:
+        while True:
+            data, src = udp.recvfrom(2048)
+            udp.sendto(_fake_mdns_response(data, tcp_port), src)
+    except (OSError, socket.timeout):
+        pass
+
+
 def selftest():
     ok = True
 
@@ -506,38 +589,47 @@ def selftest():
         print("  [%s] %s" % ("ok" if cond else "ECHEC", label))
         ok = ok and cond
 
-    print("Test 1 : décodage d'une réponse mDNS avec compression de noms")
-    qname = _encode_name(MDNS_SERVICE)
-    header = struct.pack(">HHHHHH", 0, 0x8400, 0, 1, 0, 1)
-    pkt = header
-    pkt += qname + struct.pack(">HHIH", 12, 1, 120, 0)
-    ptr_rdata_off = len(pkt)
-    inst_name = bytes([8]) + b"PC-REGIE" + _encode_name("_ezwremote._tcp.local")
-    pkt = pkt[:-2] + struct.pack(">H", len(inst_name)) + inst_name
-    pkt += struct.pack(">H", 0xC000 | ptr_rdata_off) + struct.pack(">HHIH", 33, 1, 120, 0)
-    target = _encode_name("PC-REGIE.local")
-    srv = struct.pack(">HHH", 0, 0, 51234) + target
-    pkt = pkt[:-2] + struct.pack(">H", len(srv)) + srv
-    parsed = parse_mdns_response(pkt)
+    print("Test 1 : réponse mDNS (noms compressés) décodée par le parseur manuel")
+    query = struct.pack(">HHHHHH", 4242, 0x0100, 1, 0, 0, 0) + _encode_name(MDNS_SERVICE) + struct.pack(">HH", 12, 1)
+    parsed = parse_mdns_response(_fake_mdns_response(query, 51234))
     check(parsed["ptr"] == ["PC-REGIE._ezwremote._tcp.local"], "PTR décodé : %s" % parsed["ptr"])
     check(parsed["srv"] == [("PC-REGIE._ezwremote._tcp.local", 51234, "PC-REGIE.local")], "SRV décodé : %s" % parsed["srv"])
 
-    print("Test 2 : capture complète contre un faux EW")
+    print("Test 2 : découverte du port contre un faux répondeur mDNS (UDP local)")
     listener = socket.socket()
     listener.bind(("127.0.0.1", 0))
     listener.listen(1)
     port = listener.getsockname()[1]
+    udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    udp.bind(("127.0.0.1", 0))
+    udp_port = udp.getsockname()[1]
+    threading.Thread(target=_fake_mdns_server, args=(udp, port), daemon=True).start()
+    quiet = lambda *_: None
+    found, _ = _discover_manual("127.0.0.1", udp_port, 2, quiet)
+    check(found == port, "découverte manuelle : port %d" % found)
+    try:
+        import dns.resolver  # noqa: F401
+    except ImportError:
+        print("  [--] dnspython absent : chemin dnspython non testé")
+    else:
+        found, _ = _discover_dnspython("127.0.0.1", udp_port, 2, quiet)
+        check(found == port, "découverte dnspython : port %d" % found)
+
+    print("Test 3 : capture complète contre un faux EW (port trouvé par mDNS, identité V1)")
     done = threading.Event()
     threading.Thread(target=_fake_ew, args=(listener, done), daemon=True).start()
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "captures", "selftest.jsonl")
     path = os.path.normpath(path)
     logs = []
-    res = capture("127.0.0.1", port, path, 10, True, False, str(uuid.uuid4()), log=logs.append)
+    res = capture("127.0.0.1", None, path, 10, True, False, V1_CLIENT_ID, log=logs.append, mdns_port=udp_port)
     done.wait(2)
     listener.close()
+    udp.close()
     check(res == path, "fichier de capture produit")
     recs = [r for r in load(path) if r.get("dir") in ("send", "recv")]
     acts = Counter((r["dir"], r["msg"].get("action")) for r in recs if "msg" in r)
+    hello = next(r for r in recs if r["msg"].get("action") == "connect")
+    check(hello["msg"]["uid"] == V1_CLIENT_ID and hello["msg"]["device_name"] == V1_DEVICE_NAME, "connect avec l'uid et le nom de la V1")
     check(acts[("recv", "LiveData")] == 1, "LiveData reçu")
     check(acts[("send", "getSlideInfo")] == 3, "3 getSlideInfo envoyés (titre + 2 diapos)")
     check(acts[("recv", "slideInfo")] == 3, "3 slideInfo reçus")
@@ -545,7 +637,7 @@ def selftest():
     live = next(r for r in recs if r["msg"].get("action") == "LiveData")
     check(live["decoded"]["pres_len"] == 2 and len(live["decoded"]["slides"]) == 2, "binaire LiveData décodé")
 
-    print("Test 3 : analyse du fichier")
+    print("Test 4 : analyse du fichier")
     lines = []
     warns = analyze(path, out=lines.append)
     check(any("inconnue_test" in w for w in warns), "action inconnue signalée")
@@ -571,7 +663,8 @@ def main(argv=None):
     p.add_argument("--out", help="fichier de sortie (défaut captures/ew_capture_DATE.jsonl)")
     p.add_argument("--passive", action="store_true", help="n'envoie que connect et heartbeat")
     p.add_argument("--redact", action="store_true", help="masque titres et contenus dans le fichier")
-    p.add_argument("--client-id", default=str(uuid.uuid4()), help="identifiant de télécommande (défaut : UUID aléatoire)")
+    p.add_argument("--client-id", default=V1_CLIENT_ID, help="uid de télécommande (défaut : celui de la V1)")
+    p.add_argument("--device-name", default=V1_DEVICE_NAME, help="nom de télécommande (défaut : celui de la V1)")
     p.add_argument("--no-analyze", action="store_true", help="ne pas analyser à la fin")
     p.add_argument("--analyze", metavar="FICHIER", help="analyser un fichier de capture existant")
     p.add_argument("--selftest", action="store_true", help="tester le script avec un faux EW local")
@@ -585,7 +678,7 @@ def main(argv=None):
     if not args.host:
         p.error("indiquez le PC EasyWorship (ou --analyze / --selftest)")
     out = args.out or os.path.join("captures", "ew_capture_%s.jsonl" % datetime.now().strftime("%Y%m%d_%H%M%S"))
-    path = capture(args.host, args.port, out, args.duration, not args.passive, args.redact, args.client_id)
+    path = capture(args.host, args.port, out, args.duration, not args.passive, args.redact, args.client_id, device_name=args.device_name)
     if path is None:
         return 2
     if not args.no_analyze:

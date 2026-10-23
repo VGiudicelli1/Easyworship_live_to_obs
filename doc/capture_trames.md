@@ -1,11 +1,11 @@
 # Capturer les trames d'EasyWorship
 
-Script : `tools/ew_capture.py` (Python ≥ 3.8, **bibliothèque standard uniquement**, macOS / Windows / Linux).
+Script : `tools/ew_capture.py` (Python ≥ 3.8, macOS / Windows / Linux). Fonctionne avec la bibliothèque standard seule ; si `dnspython` est installé (`pip install dnspython`, comme pour la V1), le script l'utilise pour trouver le port, **exactement comme `ew_api.py` de la V1**.
 
 ## Prérequis
 * PC EasyWorship allumé, **Bonjour installé**, télécommande EW activée.
 * Le Mac (ou autre) qui lance le script est sur le même réseau local.
-* Aucune installation de paquet : `python3 tools/ew_capture.py ...`
+* Recommandé : `pip install dnspython` (même méthode de découverte que la V1). Sans lui, un repli manuel équivalent est utilisé.
 
 ## Utilisation
 ```
@@ -32,8 +32,11 @@ Windows : remplacer `python3` par `py`.
 * Résumé affiché à la fin : actions vues, champs, valeurs distinctes de `status`, délais, et **points d'attention** (action inconnue, champ `size` hors liste, binaire incohérent, champs « inconnus » du header non nuls).
 * Le dossier `captures/` est ignoré par Git : les fichiers contiennent le texte des diapos. Pour partager une capture, utiliser `--redact` (le script ne masque que `title`, `content`, `device_name`) et relire le fichier avant publication.
 
+## Si la connexion échoue
+Le script affiche chaque étape : serveurs mDNS interrogés (toutes les adresses de l'hôte, IPv4 et IPv6), méthode utilisée, erreur exacte. Si dnspython échoue, il retente avec le repli manuel. Vérifier dans l'ordre : Bonjour installé et télécommande activée sur le PC EW ; le nom du PC se résout (`ping NOM`) ; essayer l'IP à la place du nom ; pare-feu Windows (UDP 5353 et port TCP de la télécommande) ; si la découverte échoue seule, `--port` avec le port affiché par EW. Si le port est ouvert mais EW ne répond pas, accepter l'éventuelle demande d'appairage de la télécommande sur EW.
+
 ## Ce que le script envoie
-Seulement `connect` (avec un UUID aléatoire), `heartbeat` toutes les 3 s, et, sauf `--passive`, `GetLiveData` / `getSlideInfo` comme le fait `ew_api.py`. Jamais de commande de pilotage. `--passive` est utile si l'on soupçonne que ces requêtes perturbent EW.
+Seulement `connect` (avec **l'uid `a164e834-…` et le nom `ew to obs` de la V1**, modifiables par `--client-id` / `--device-name`), `heartbeat` toutes les 3 s, et, sauf `--passive`, `GetLiveData` / `getSlideInfo` comme le fait `ew_api.py`. Jamais de commande de pilotage. `--passive` est utile si l'on soupçonne que ces requêtes perturbent EW.
 
 ## Suite
 Les fichiers `.jsonl` (masqués) alimenteront `tests/fixtures/` pour tester `ew_client` sans EW (étape 1 de `doc/plan_de_migration.md`) et compléteront `doc/protocole_easyworship.md`.
