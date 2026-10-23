@@ -101,14 +101,20 @@ Contexte : EW sur Windows avec **Bonjour** (obligatoire pour la télécommande),
 4. Repli : saisie manuelle du nom ou de l'IP.
 5. **Validé (capture du 2026-10-23)** : la requête mDNS *unicast* vers `<nom-du-pc>.local:5353` fonctionne depuis le Mac vers le PC Windows, le nom `.local` se résout, et le port TCP est dynamique. Reste à valider : l'exploration en *multicast* (liste des PC EW) et le comportement DHCP (changement d'IP).
 
+### Reconnexion et détection de coupure (établies sur captures réelles)
+* À chaque tentative : **découverte du port**, puis connexion, puis `connect`. Le port change à chaque lancement d'EW (3 valeurs en 3 lancements).
+* Fermeture observée dans tous les cas (Wi‑Fi local coupé, EW fermé, appairage révoqué) : **EOF** sur la lecture. Attente progressive 1 s → 10 s entre tentatives ; état « Perdu (nouvel essai dans N s) » ; la sortie passe à `visible = false` dès la perte pour ne pas laisser un texte périmé dans OBS.
+* **Coupure silencieuse** (aucun EOF) : non observée. EW pouvant se taire des minutes, on ne peut pas utiliser l'absence de messages. Prévoir : TCP keepalive (`SO_KEEPALIVE`, délais courts) et échec d'écriture des heartbeats ; à tester en débranchant le PC EW.
+* Les heartbeats d'EW vers le client existent (une fois vu) : les ignorer.
+
 ### Contrat WebSocket app → navigateur
 Un seul message JSON : `{"visible": bool, "text": str}`. Détail dans `spec/interfaces.md`.
 
 ### Règle d'émission de l'état (établie sur captures réelles)
 1. L'état de sortie est `(visible, text)` avec `visible = not (logo or black or clear)` et `text` = contenu de la diapo `(pres_rowid, slide_rowid)` du dernier `status`, normalisé `\r\n` → `\n`.
 2. Il est **recalculé** à chaque `status` et à chaque `slideInfo`/`LiveData` reçu, puis diffusé **seulement s'il a changé** (les `status` répétés, ceux où seuls `permissions`/`schedulerev` bougent, et le double `status` d'un changement de diapo ne produisent rien).
-3. Un texte vide est un état valide (diapo vide ou sans texte).
-4. Nouveau `liverev` ⇒ tout recharger (`GetLiveData`, `getSlideInfo`) ; en attendant les `slideInfo` manquants, ne pas diffuser de texte périmé.
+3. Un texte vide est un état valide (diapo vide ou sans texte). **Rien en direct** (`imagehash` vide, ou `slide_rowid` absent du dernier `LiveData`) ⇒ `visible = false`, texte vide.
+4. Nouveau `liverev` ⇒ **vider le cache des diapos** puis tout recharger (`GetLiveData`, `getSlideInfo`) ; les `slide_rowid` des chants (`pres_rowid = "0"`, identifiants négatifs) ne sont valables que pour un `liverev`. En attendant les `slideInfo` manquants, ne pas diffuser de texte périmé. Ne pas demander le titre (`slide_rowid 0`). Demander la diapo courante en premier.
 5. Ne dépendre ni de `imagehash`, ni de `rectype`, ni de `slide_no`/`pres_no`.
 
 ## 4. Exigences non fonctionnelles

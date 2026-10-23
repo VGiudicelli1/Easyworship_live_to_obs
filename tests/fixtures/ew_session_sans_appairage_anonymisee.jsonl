@@ -1,0 +1,16 @@
+{"t": 0.0, "ts": "2026-10-23T21:04:49.232", "dir": "info", "msg": {"event": "connected", "host": "pc-ew.local", "port": 56326, "active": true, "redact": false, "python": "3.12.4"}}
+{"t": 0.006, "ts": "2026-10-23T21:04:49.238", "dir": "send", "msg": {"device_type": 0, "action": "connect", "uid": "00000000-0000-4000-8000-000000000003", "device_name": "ew to obs"}}
+{"t": 0.013, "ts": "2026-10-23T21:04:49.245", "dir": "recv", "msg": {"action": "notPaired", "requestrev": "0"}}
+{"t": 3.068, "ts": "2026-10-23T21:04:52.300", "dir": "send", "msg": {"action": "heartbeat", "requestrev": 0}}
+{"t": 6.118, "ts": "2026-10-23T21:04:55.350", "dir": "send", "msg": {"action": "heartbeat", "requestrev": 0}}
+{"t": 9.173, "ts": "2026-10-23T21:04:58.406", "dir": "send", "msg": {"action": "heartbeat", "requestrev": 0}}
+{"t": 12.229, "ts": "2026-10-23T21:05:01.461", "dir": "send", "msg": {"action": "heartbeat", "requestrev": 0}}
+{"t": 15.284, "ts": "2026-10-23T21:05:04.516", "dir": "send", "msg": {"action": "heartbeat", "requestrev": 0}}
+{"t": 18.33, "ts": "2026-10-23T21:05:07.563", "dir": "send", "msg": {"action": "heartbeat", "requestrev": 0}}
+{"t": 21.369, "ts": "2026-10-23T21:05:10.601", "dir": "send", "msg": {"action": "heartbeat", "requestrev": 0}}
+{"t": 24.423, "ts": "2026-10-23T21:05:13.656", "dir": "send", "msg": {"action": "heartbeat", "requestrev": 0}}
+{"t": 27.474, "ts": "2026-10-23T21:05:16.707", "dir": "send", "msg": {"action": "heartbeat", "requestrev": 0}}
+{"t": 30.52, "ts": "2026-10-23T21:05:19.753", "dir": "send", "msg": {"action": "heartbeat", "requestrev": 0}}
+{"t": 33.579, "ts": "2026-10-23T21:05:22.812", "dir": "send", "msg": {"action": "heartbeat", "requestrev": 0}}
+{"t": 36.638, "ts": "2026-10-23T21:05:25.871", "dir": "send", "msg": {"action": "heartbeat", "requestrev": 0}}
+{"t": 39.687, "ts": "2026-10-23T21:05:28.920", "dir": "send", "msg": {"action": "heartbeat", "requestrev": 0}}

@@ -163,3 +163,36 @@ Le port de la télécommande valait **63612** dans ces deux captures contre 5739
 * Après rechargement la diapo en direct garde le **même** `(pres_rowid, slide_rowid)` mais son texte peut avoir changé : la sortie doit être **recalculée et diffusée si le texte a changé**. Dédoublonner sur l'état de sortie `(visible, texte)` et non sur la clé de diapo.
 * `schedulerev` (planning EW) change sans effet sur le direct : **à ignorer**, comme `permissions`. Un `status` reçu deux fois de suite avec la même diapo (cas du 10,5 s) ne doit rien déclencher.
 * Un `status` peut précéder la fin du rechargement : tant que les `slideInfo` de la diapo courante manquent, ne pas diffuser de texte périmé *ni* vide ; attendre (≈ 0,1–0,2 s) ou conserver l'ancien état jusqu'à réception.
+
+## 11. Coupures, fermeture d'EW, aucun live, sans appairage (6e à 9e captures, EW 7.4.1.9)
+
+Sources : `tests/fixtures/ew_session_coupure_wifi_anonymisee.jsonl`, `ew_session_fermeture_ew_anonymisee.jsonl`, `ew_session_aucun_live_et_chants_anonymisee.jsonl`, `ew_session_sans_appairage_anonymisee.jsonl`. Les trois premières ont été lancées **sans** `--reconnect` : le script s'arrête donc à la première fermeture (la reconnexion elle-même n'a pas été observée en réel).
+
+### Coupure du Wi‑Fi du client (test 1)
+* À 10,8 s (dernier heartbeat à 9,1 s) la lecture renvoie **EOF** : le système du client ferme la connexion dès que l'interface réseau tombe. L'événement `closed_by_peer` du script est donc ici une fermeture **locale**, pas un message d'EW.
+* **Non observé** : une coupure *silencieuse* (câble ou Wi‑Fi coupé côté PC EW, le client gardant son interface) où aucun EOF n'arrive. Voir ci-dessous la contrainte de détection.
+
+### Fermeture d'EW (test 2)
+* À 8,876 s : un dernier `status` (même diapo, même `liverev`, seul `schedulerev` change : EW enregistre le planning en quittant) puis **EOF dans la même milliseconde**. Aucun message d'adieu.
+* **Le port change à chaque lancement d'EW** : 57395 (sessions 1 à 3) → 63612 (sessions 4 à 7) → 56326 (après ce redémarrage). Après toute coupure, **redécouvrir le port à chaque tentative** ; un port mémorisé est faux dès qu'EW a redémarré.
+
+### Aucune diapo en direct (test 3, début de session, EW venant d'être ouvert)
+* `status` avec **`pres_rowid = "0"`, `slide_rowid` négatif (`-100049`), `imagehash = ""`** ; `GetLiveData` → `LiveData` de **40 octets seulement** (en-tête, `pres_len = 0`, aucune diapo). Notre `getSlideInfo` du titre (`slide_rowid 0`, `pres_rowid 0`) **n'a jamais reçu de réponse** : ne pas attendre le titre.
+* ⇒ **Rien en direct** = `imagehash` vide, ou `slide_rowid` absent de la liste du dernier `LiveData`. Sortie : texte vide, `visible = false`.
+
+### Chants de la bibliothèque : `pres_rowid = "0"` et identifiants négatifs (test 3)
+* Un chant mis en direct arrive avec **`pres_rowid = "0"`** et des `slide_rowid` **négatifs** (`-100280` … `-100288`), 9 diapos ; le titre du chant est `slideInfo` de `slide_rowid "0"`. Un second chant : `-100378` … `-100386`. Ce ne sont **pas des identifiants stables** : ils sont attribués à la mise en direct.
+* ⇒ `pres_rowid = "0"` ne signifie pas « rien en direct » ; et `(pres_rowid, slide_rowid)` n'identifie une diapo **qu'avec le `liverev` courant**. À chaque nouveau `liverev`, vider le cache des diapos (comme la V1) et ne chercher le texte que dans le cache du `liverev` en cours.
+* Un refrain répété est constitué de **plusieurs diapos distinctes** (identifiants différents) de contenu identique, d'étiquette `Chorus` (`label_bkcolor 5518453`).
+* Les sections `Verse n` / `Chorus` sont dans `title` (voir §10). Textes multilignes avec `\r\n`, apostrophes droites `'` et typographiques `’`.
+
+### Heartbeat envoyé par EW (test 3)
+* Une fois, 2,2 s après `connect` : `{"action":"heartbeat","requestrev":"0"}` **d'EW vers le client** (jamais vu dans les 8 autres sessions). Les gérer sans rien faire. **EW est silencieux pendant des minutes** quand rien ne change : l'absence de message ne prouve pas une panne. Détecter une coupure silencieuse par un autre moyen (voir `spec/technique.md`).
+
+### Sans appairage (test 4)
+* L'`uid` de la V1, non appairé à ce moment-là, reçoit `notPaired` à 13 ms puis **rien**. La connexion reste ouverte **au moins 40 s** (13 heartbeats envoyés sans réponse ni fermeture). Pas de délai d'expiration observé ; limite supérieure inconnue. Conforme à ce qu'on attend d'un appairage révoqué (§9) : après révocation, la reconnexion donne `notPaired`.
+
+### Conséquences pour le client
+1. Reconnexion : `découverte du port → connexion → connect`, **à chaque tentative**, avec attente progressive (1 s → 10 s) ; ne jamais réutiliser un port d'une session précédente.
+2. Un `notPaired` ne doit pas déclencher de nouvelle tentative : rester connecté et envoyer les heartbeats (§8).
+3. L'application ne lit que le texte des diapos : **ne pas demander le titre (`slide_rowid 0`)**, cela évite un aller-retour qui peut rester sans réponse. Demander d'abord la diapo courante, puis les autres pour que la navigation soit instantanée.

@@ -41,7 +41,7 @@ V1_DEVICE_NAME = "ew to obs"
 EXTRA_ACTIONS = {"LiveData", "ScheduleData", "currentImage", "slideImage"}
 IMAGE_ACTIONS = {"currentImage", "slideImage"}
 KNOWN_SENT = {"connect", "heartbeat", "GetLiveData", "getSlideInfo"}
-KNOWN_RECV = {"paired", "notPaired", "status", "LiveData", "slideInfo", "ScheduleData", "currentImage", "slideImage"}
+KNOWN_RECV = {"paired", "notPaired", "heartbeat", "status", "LiveData", "slideInfo", "ScheduleData", "currentImage", "slideImage"}
 REDACT_KEYS = {"title", "content", "device_name"}
 LIVEDATA_HEADER = struct.Struct("<lqqqlq")  # 40 octets, voir doc/protocole_easyworship.md
 LIVEDATA_SLIDE = struct.Struct("<qq")  # rowid, revision
@@ -421,9 +421,9 @@ def capture(host, port, out, duration, active, redact, client_id, log=print, dev
                     try:
                         chunk = sock.recv(16384)
                         if not chunk:
-                            log("Connexion fermée par EW.")
+                            log("Connexion fermée (par EW, ou coupure du réseau local).")
                             r.write("info", msg={"event": "closed_by_peer"})
-                            reason = "connexion fermée par EW"
+                            reason = "connexion fermée (EW ou réseau local)"
                             break
                         session.feed(chunk)
                     except socket.timeout:
