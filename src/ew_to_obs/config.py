@@ -49,6 +49,8 @@ class Config:
     web_bind: str = "127.0.0.1"
     lost_grace_seconds: float = 2.0
     obs_query: str = "lines=4"  # réglages de la page ajoutés à l'adresse donnée à OBS
+    serve: bool = False  # mode sans fenêtre : servir la page sans avoir à passer --serve
+    log_level: int = 1  # journal sur stderr en mode sans fenêtre : 0 erreurs … 3 détails
 
 
 def default_config_dir(env: dict | None = None, platform: str | None = None) -> Path:
@@ -146,6 +148,17 @@ def clean(raw: dict) -> tuple[Config, list[str]]:
             config.obs_query = value
         else:
             reject("obs_query", value)
+    if "serve" in raw:
+        if isinstance(raw["serve"], bool):
+            config.serve = raw["serve"]
+        else:
+            reject("serve", raw["serve"])
+    if "log_level" in raw:
+        level = raw["log_level"]
+        if isinstance(level, int) and not isinstance(level, bool) and 0 <= level <= 3:
+            config.log_level = level
+        else:
+            reject("log_level", level)
     version = raw.get("version", CONFIG_VERSION)
     if isinstance(version, int) and version > CONFIG_VERSION:
         warnings.append(

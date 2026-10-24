@@ -70,6 +70,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--headless", action="store_true", help="sans fenêtre (sinon : la fenêtre s'ouvre)"
     )
     parser.add_argument(
+        "--saveconf",
+        action="store_true",
+        help="enregistre --host, --web-port, --web-bind, --grace, --serve et --loglevel dans la "
+        "configuration (ils deviennent les valeurs par défaut) puis quitte, sans démarrer",
+    )
+    parser.add_argument(
         "--ci",
         action="store_true",
         help="mode service, sans fenêtre : équivaut à --headless --serve, journal sur stderr",
@@ -99,6 +105,22 @@ def remember(args: argparse.Namespace, store: ConfigStore) -> None:
     store.update(**changes)
 
 
+def save_options(args: argparse.Namespace, store: ConfigStore) -> None:
+    """`--saveconf` : les options de service passées deviennent les valeurs par défaut."""
+    changes: dict[str, object] = {}
+    if args.web_port is not None:
+        changes["web_port"] = args.web_port
+    if args.web_bind:
+        changes["web_bind"] = args.web_bind
+    if args.grace is not None:
+        changes["lost_grace_seconds"] = args.grace
+    if args.serve or args.ci:
+        changes["serve"] = True
+    if args.loglevel is not None:
+        changes["log_level"] = args.loglevel
+    store.update(**changes)
+
+
 def resolve(args: argparse.Namespace, store: ConfigStore) -> Settings | None:
     """Fusionne la ligne de commande et la configuration (mode sans fenêtre).
 
@@ -107,6 +129,8 @@ def resolve(args: argparse.Namespace, store: ConfigStore) -> Settings | None:
     if not (args.host or store.config.ew_host):
         return None
     remember(args, store)
+    if args.saveconf:
+        save_options(args, store)
     config = store.config
     return Settings(
         host=args.host or config.ew_host,
@@ -114,7 +138,7 @@ def resolve(args: argparse.Namespace, store: ConfigStore) -> Settings | None:
         client_id=config.client_id,
         device_name=config.device_name,
         grace=args.grace if args.grace is not None else config.lost_grace_seconds,
-        serve=args.serve or args.ci,
+        serve=args.serve or args.ci or config.serve,
         web_bind=args.web_bind or config.web_bind,
         web_port=args.web_port if args.web_port is not None else config.web_port,
         verbose=args.verbose,
@@ -220,10 +244,13 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(asdict(store.config), indent=2, ensure_ascii=False))
         return 0
     # le journal s'ouvre avant la lecture de la config : ses avertissements y figurent
-    level = args.loglevel if args.loglevel is not None else (2 if args.ci else None)
-    log_path = setup_logging(store.directory, args.verbose, level)
+    log_path = setup_logging(store.directory, args.verbose, args.loglevel)
     store.load()
-    if not (args.headless or args.ci):
+    if args.loglevel is None and (args.headless or args.ci):
+        # sans --loglevel : --ci = 2 ; sinon le niveau enregistré (--saveconf), 1 par défaut
+        level = 2 if args.ci else store.config.log_level
+        log_path = setup_logging(store.directory, args.verbose, level)
+    if not (args.headless or args.ci or args.saveconf):
         return _main_window(args, store)
     settings = resolve(args, store)
     if settings is None:
@@ -234,6 +261,10 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 2
+    if args.saveconf:
+        print("# configuration enregistrée : %s" % store.path, file=sys.stderr)
+        print(json.dumps(asdict(store.config), indent=2, ensure_ascii=False))
+        return 0
     log.info("démarrage : PC EW %s, configuration %s", settings.host, store.path)
     if not settings.ci:
         print(

@@ -546,6 +546,16 @@ Prérequis : une Release publiée par tag (`doc/build_et_installation.md`), ou l
 - **Attendu** : 0 erreurs seules, 1 avertissements, 2 connexions et états, 3 détails ; stdout reste vide en `--ci`.
 - ☐ OK ☐ KO
 
+### R-111 · Installation à partir des sources et `--saveconf` (P1)
+- **Faire** : sur le PC cible, `git clone`, `python3.12 -m venv .venv`, activer, `pip install -r venv/requirements.txt`, puis `python -m ew_to_obs --host NOM --serve --loglevel 2 --saveconf`.
+- **Attendu** : installation sans erreur (Windows : roues précompilées d'aiohttp) ; rien ne démarre ; `config.json` contient le PC, `serve: true`, `log_level: 2` ; `python -m ew_to_obs --headless` seul se connecte ensuite à EW et sert la page.
+- ☐ OK ☐ KO — notes :
+
+### R-112 · Tâche planifiée Windows au démarrage (P1)
+- **Faire** : `packaging\autostart\ew_to_obs_tache.cmd` en administrateur ; redémarrer le PC sans ouvrir de session si possible, puis ouvrir EW.
+- **Attendu** : le service tourne (page joignable depuis OBS), `ew_logs.log` sans erreur, accepté une fois dans EW puis plus de demande. Vérifier que la tâche SYSTEM utilise bien la config de l'utilisateur (`--config-dir`) et que Bonjour/pare-feu ne bloquent pas.
+- ☐ OK ☐ KO — notes :
+
 ---
 
 ## 6. Longue durée

@@ -22,6 +22,19 @@ Objectif : **une seule application**, simple, qui se souvient du PC EasyWorship,
 * **OBS** avec une *Source navigateur*.
 * Application visée : macOS, Windows et Linux.
 
+## Installation à partir des sources (usage recommandé, Windows ou Mac)
+
+```
+git clone https://github.com/vgiudicelli1/easyworship_live_to_obs && cd easyworship_live_to_obs
+python3.12 -m venv .venv
+.venv\Scripts\activate                  # macOS/Linux : source .venv/bin/activate
+pip install -r venv/requirements.txt
+python -m ew_to_obs --host NOM_DU_PC_EW --serve --loglevel 2 --saveconf   # enregistre la config, ne démarre pas
+python -m ew_to_obs --headless --serve                                    # ce que lance le démarrage automatique
+```
+
+`--saveconf` fait de `--host`, `--serve`, `--loglevel`, `--web-port`, `--web-bind` et `--grace` les valeurs par défaut (fichier `config.json` du dossier utilisateur) ; le lancement du démarrage n'a alors plus rien à indiquer. **Windows** : `packaging\autostart\ew_to_obs_tache.cmd` (invite administrateur) crée la tâche « au démarrage du PC » ; autres systèmes : `packaging/autostart/`. Le premier lancement oblige à accepter la télécommande dans EasyWorship (une seule fois).
+
 ## Développement
 
 Étapes 1 à 5 du [plan](doc/plan_de_migration.md) : le **client EasyWorship**, le **serveur web avec la page pour OBS**, la **configuration mémorisée** et la **fenêtre** (`src/ew_to_obs/`) sont écrits et testés **sans EasyWorship ni OBS réels** ; il reste le packaging (installeur). Tout ce qui reste à valider avec le vrai matériel est dans **[doc/recette.md](doc/recette.md)**.

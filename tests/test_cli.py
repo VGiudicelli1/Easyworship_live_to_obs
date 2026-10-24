@@ -230,3 +230,40 @@ def test_ci_mode_runs_as_a_service_and_logs_on_stderr(tmp_path):
     assert out == ""  # rien sur la sortie standard : stderr seul est redirigé vers le journal
     assert "INFO" in err and "page pour OBS" in err and "connexion" in err
     assert "Bonjour" not in err  # jamais le texte des diapos dans le journal
+
+
+def test_saveconf_records_service_options_and_does_not_start(tmp_path, capsys):
+    from ew_to_obs.__main__ import main
+
+    cfg = str(tmp_path / "cfg")
+    code = main(
+        ["--host", "pc.local", "--serve", "--loglevel", "2", "--web-port", "8123"]
+        + ["--grace", "3", "--saveconf", "--config-dir", cfg]
+    )
+    assert code == 0
+    saved = ConfigStore(cfg)
+    saved.load()
+    config = saved.config
+    assert (config.ew_host, config.serve, config.log_level) == ("pc.local", True, 2)
+    assert (config.web_port, config.lost_grace_seconds) == (8123, 3.0)
+    assert '"ew_host": "pc.local"' in capsys.readouterr().out
+
+
+def test_saved_options_are_the_defaults_of_a_plain_headless_run(tmp_path):
+    store = store_for(tmp_path)
+    resolve(parse("--host", "pc", "--serve", "--web-port", "8123", "--saveconf"), store)
+    again = resolve(parse("--headless"), store_for(tmp_path))  # le lancement du démarrage
+    assert again.serve and again.web_port == 8123 and again.host == "pc"
+
+
+def test_without_saveconf_service_options_are_not_recorded(tmp_path):
+    resolve(parse("--host", "pc", "--serve", "--web-port", "8123"), store_for(tmp_path))
+    config = store_for(tmp_path).config
+    assert not config.serve and config.web_port == 8000
+
+
+def test_invalid_saved_serve_and_log_level_fall_back_to_defaults(tmp_path):
+    from ew_to_obs.config import clean
+
+    config, warnings = clean({"serve": "oui", "log_level": 9})
+    assert not config.serve and config.log_level == 1 and len(warnings) == 2
