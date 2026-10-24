@@ -1,4 +1,12 @@
-# Build et installation (proposition)
+# Build et installation
+
+> **État** : `packaging/` (spec PyInstaller, installeur Inno Setup, test de fumée) et `.github/workflows/release.yml` sont écrits. Seul le build Linux a été essayé en local ; les builds Windows/macOS et l'installeur n'ont **jamais tourné** (tests R-100…R-107 de `doc/recette.md`). Le workflow ne se déclenche que sur un tag `v*` ou à la main (onglet Actions, pour essayer sans publier).
+
+## Publier une version
+1. Mettre à jour la version dans `pyproject.toml` et `src/ew_to_obs/__init__.py`.
+2. `git tag vX.Y.Z && git push origin vX.Y.Z` : tests, build, test de fumée sur les 3 systèmes, puis Release avec `ew_to_obs-setup-X.Y.Z.exe`, `ew_to_obs-X.Y.Z-macos.zip`, `ew_to_obs-X.Y.Z-linux.tar.gz`.
+3. Build local : `pip install pyinstaller && pyinstaller packaging/ew_to_obs.spec --clean -y`, puis `python packaging/smoke.py dist/ew_to_obs/ew_to_obs`.
+
 
 ## État actuel
 * `Makefile` : uniquement macOS, cible `dist/ew_to_txt.app` alors que la sortie PyInstaller s'appelle `ew_to_obs`, chemin `--paths lib/python3.8/site-packages` incompatible avec la CI en Python 3.12.

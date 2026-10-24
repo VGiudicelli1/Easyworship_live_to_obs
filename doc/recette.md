@@ -492,6 +492,48 @@ Le délai se règle : `lost_grace_seconds` dans `config.json` ou `--grace`.
 
 ---
 
+## 5c. Application installée (emballage)
+
+Prérequis : une Release publiée par tag (`doc/build_et_installation.md`), ou l'exécution manuelle du workflow « Release ». Ces tests valident ce que la CI ne voit pas.
+
+### R-100 · Release complète (P1)
+- **Faire** : pousser un tag de test (ex. `v0.1.0-rc1`) ; ouvrir l'onglet Actions puis la Release.
+- **Attendu** : 3 jobs verts (tests + fumée) ; fichiers `ew_to_obs-setup-*.exe`, `*-macos.zip`, `*-linux.tar.gz`.
+- ☐ OK ☐ KO — notes :
+
+### R-101 · macOS : ouverture de l'app non signée (P1)
+- **Faire** : télécharger le zip, le décompresser, ouvrir l'app (clic droit > Ouvrir si Gatekeeper bloque).
+- **Attendu** : la fenêtre s'ouvre ; noter la manipulation exacte nécessaire (à documenter dans le README).
+- ☐ OK ☐ KO — notes :
+
+### R-102 · macOS : l'app fonctionne comme `python -m ew_to_obs` (P1)
+- **Faire** : rejouer R-81 et R-83 avec l'app ; vérifier que `~/Library/Application Support/ew_to_obs` est utilisé.
+- ☐ OK ☐ KO
+
+### R-103 · macOS : pare-feu et réseau local (P2)
+- **Faire** : premier lancement ; une autorisation « réseau local » / « connexions entrantes » est-elle demandée ? La découverte du PC EW fonctionne-t-elle après l'avoir accordée ?
+- ☐ OK ☐ KO — notes :
+
+### R-104 · Windows : installeur (P2, variante PC d'EW)
+- **Faire** : exécuter `ew_to_obs-setup-*.exe` sur un PC sans Python (SmartScreen : « Exécuter quand même »).
+- **Attendu** : raccourci dans le menu Démarrer, fenêtre au lancement, texte reçu d'EW.
+- ☐ OK ☐ KO — notes :
+
+### R-105 · Windows : démarrage avec Windows (P2)
+- **Faire** : installer en cochant « Démarrer avec Windows », redémarrer.
+- **Attendu** : la fenêtre s'ouvre à la session, se reconnecte à EW sans rien saisir.
+- ☐ OK ☐ KO
+
+### R-106 · Windows : désinstallation (P3)
+- **Attendu** : programme retiré ; `%APPDATA%\ew_to_obs` conservé ; une réinstallation ne redemande pas l'appairage.
+- ☐ OK ☐ KO
+
+### R-107 · Taille et rapidité de démarrage (P3)
+- **Faire** : noter la taille de chaque livrable et le délai avant l'apparition de la fenêtre.
+- ☐ OK ☐ KO — notes :
+
+---
+
 ## 6. Longue durée
 
 ### R-60 · Un service complet (≈ 3 h) (P1)
@@ -572,6 +614,7 @@ python tools/ew_capture.py NOM_DU_PC_EW --reconnect --duration 300 --redact
 | H12 | Une fenêtre masquée ou en arrière-plan ne ralentit pas l'affichage (App Nap de macOS) | R-89 |
 | H13 | tkinter est disponible et la fenêtre s'affiche correctement avec le Python choisi sur le Mac | R-80, R-90 |
 | H14 | Copier, fermer par Cmd+Q et le dossier du journal se comportent normalement sur macOS et Windows | R-83, R-88, R-91, R-92 |
+| H15 | L'exécutable PyInstaller non signé s'ouvre sur macOS et Windows avec une manipulation simple, et reste autonome (page web, tkinter inclus) | R-101, R-104 |
 
 ## 10. Ce qui est déjà couvert automatiquement (rappel)
 
