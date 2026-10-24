@@ -166,3 +166,67 @@ def test_show_config_is_read_only(tmp_path):
     directory = tmp_path / "cfg"
     assert main(["--config-dir", str(directory), "--show-config"]) == 0
     assert not directory.exists()  # rien créé : ni dossier, ni journal, ni config
+
+
+def test_ci_mode_means_headless_and_serve(tmp_path):
+    settings = resolve(parse("--ci", "--host", "PC"), store_for(tmp_path))
+    assert settings.serve and settings.ci
+    assert not resolve(parse("--headless", "--host", "PC"), store_for(tmp_path)).serve
+
+
+def test_loglevel_only_accepts_0_to_3():
+    import pytest
+
+    assert parse("--loglevel", "2").loglevel == 2
+    with pytest.raises(SystemExit):
+        parse("--loglevel", "4")
+
+
+def test_ci_mode_runs_as_a_service_and_logs_on_stderr(tmp_path):
+    """Lancement réel `--ci --loglevel 2` : page servie, état sur stderr (pas sur stdout)."""
+    import socket
+    import sys
+    import urllib.request
+
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        web_port = probe.getsockname()[1]
+
+    async def fetch(url):
+        return await asyncio.to_thread(lambda: urllib.request.urlopen(url, timeout=2).read())
+
+    async def scenario():
+        ew = FakeEw()
+        await ew.start()
+        await ew.go_live({1: "Bonjour"}, current=1)
+        process = await asyncio.create_subprocess_exec(
+            *[sys.executable, "-m", "ew_to_obs", "--ci", "--host", "127.0.0.1"],
+            *["--port", str(ew.port), "--web-port", str(web_port)],
+            *["--loglevel", "2", "--config-dir", str(tmp_path / "cfg")],
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        try:
+            page = b""
+            for _ in range(200):
+                try:
+                    page = await fetch("http://127.0.0.1:%d/" % web_port)
+                    break
+                except OSError:
+                    await asyncio.sleep(0.1)
+            for _ in range(100):
+                if ew.connects:
+                    break
+                await asyncio.sleep(0.1)
+            await asyncio.sleep(0.5)
+        finally:
+            process.terminate()
+            out, err = await asyncio.wait_for(process.communicate(), 10)
+            await ew.stop()
+        return page, out.decode(), err.decode()
+
+    page, out, err = asyncio.run(asyncio.wait_for(scenario(), 40))
+    assert b"<html" in page.lower()
+    assert out == ""  # rien sur la sortie standard : stderr seul est redirigé vers le journal
+    assert "INFO" in err and "page pour OBS" in err and "connexion" in err
+    assert "Bonjour" not in err  # jamais le texte des diapos dans le journal

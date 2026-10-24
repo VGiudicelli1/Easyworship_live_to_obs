@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>io.github.ew-to-obs</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Applications/Easyworship vers OBS.app/Contents/MacOS/ew_to_obs</string>
+    <string>--ci</string>
+    <string>--host</string><string>NOM_DU_PC_EW.local</string>
+    <string>--loglevel</string><string>2</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>StandardErrorPath</key><string>/tmp/ew_logs.log</string>
+</dict>
+</plist>

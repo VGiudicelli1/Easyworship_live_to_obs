@@ -34,6 +34,7 @@ ruff check src tests && ruff format --check src tests
 python -m ew_to_obs                                                  # la fenêtre : saisir le PC EW une fois, tout est mémorisé
 python -m ew_to_obs --headless --host NOM_DU_PC_EW --serve           # sans fenêtre, 1er lancement
 python -m ew_to_obs --headless --serve                               # sans fenêtre, ensuite : plus rien à saisir
+python -m ew_to_obs --ci --host NOM_DU_PC_EW --loglevel 2 2>> ew_logs.log   # mode service (= --headless --serve), à lancer au démarrage : modèles dans packaging/autostart/
 python -m ew_to_obs --headless --host NOM_DU_PC_EW                   # sans fenêtre ni page : une ligne JSON par changement de diapo
 ```
 

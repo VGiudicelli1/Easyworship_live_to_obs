@@ -137,7 +137,7 @@ python -m ew_to_obs --headless --host NOM --serve   # sans fenêtre, 1er lanceme
 python -m ew_to_obs --headless --serve              # sans fenêtre, ensuite : rien à saisir
 ```
 
-Options : `--host`, `--client-id`, `--device-name` (mémorisés) ; `--port` (diagnostic), `--grace`, `--web-port`, `--web-bind` (ce lancement seulement) ; `--headless` (sans fenêtre) ; `--serve` (page pour OBS, mode sans fenêtre : la fenêtre la sert toujours) ; `--config-dir`, `--show-config` (lecture seule), `-v`. Sans `--serve`, une ligne JSON `{"visible":…, "text":…}` par changement d'état sur la sortie standard. Codes de sortie : 0 normal, 2 pas de PC EW connu (mode sans fenêtre) ou port web occupé, 3 fenêtre impossible (tkinter ou écran absent).
+Options : `--host`, `--client-id`, `--device-name` (mémorisés) ; `--port` (diagnostic), `--grace`, `--web-port`, `--web-bind` (ce lancement seulement) ; `--headless` (sans fenêtre) ; `--ci` (mode service : `--headless --serve`, état de connexion dans le journal sur stderr) ; `--loglevel 0..3` (stderr : erreurs, avertissements, infos, détails ; 2 par défaut avec `--ci`) ; `--serve` (page pour OBS, mode sans fenêtre : la fenêtre la sert toujours) ; `--config-dir`, `--show-config` (lecture seule), `-v`. Sans `--serve`, une ligne JSON `{"visible":…, "text":…}` par changement d'état sur la sortie standard. Codes de sortie : 0 normal, 2 pas de PC EW connu (mode sans fenêtre) ou port web occupé, 3 fenêtre impossible (tkinter ou écran absent).
 
 ## 5b. Journal
 

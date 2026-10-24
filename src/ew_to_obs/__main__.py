@@ -3,6 +3,7 @@
     python -m ew_to_obs                                ouvre la fenêtre (mode normal)
     python -m ew_to_obs --headless --host NOM --serve  sans fenêtre, 1er lancement
     python -m ew_to_obs --headless --serve             sans fenêtre, ensuite : rien à saisir
+    python -m ew_to_obs --ci --host NOM --loglevel 2 2>> ew.log   service en arrière-plan
 
 Sans fenêtre et sans --serve, affiche une ligne JSON à chaque changement de diapo. La configuration
 (PC EW, dernière IP, identité de la télécommande) est enregistrée dans le dossier de configuration
@@ -21,7 +22,7 @@ from dataclasses import asdict, dataclass
 from .client import ConnectionStatus, EwClient
 from .config import ConfigStore
 from .live import LiveState
-from .logs import setup_logging
+from .logs import LEVELS, setup_logging
 from .web import StateHub, WebServer
 
 log = logging.getLogger("ew_to_obs")
@@ -38,6 +39,7 @@ class Settings:
     web_bind: str
     web_port: int
     verbose: bool
+    ci: bool = False  # mode service : l'état de connexion passe par le journal (--loglevel)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -66,6 +68,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--headless", action="store_true", help="sans fenêtre (sinon : la fenêtre s'ouvre)"
+    )
+    parser.add_argument(
+        "--ci",
+        action="store_true",
+        help="mode service, sans fenêtre : équivaut à --headless --serve, journal sur stderr",
+    )
+    parser.add_argument(
+        "--loglevel",
+        type=int,
+        choices=sorted(LEVELS),
+        help="détail du journal sur stderr : 0 erreurs, 1 avertissements, 2 infos, 3 détails "
+        "(--ci : 2 par défaut)",
     )
     parser.add_argument("-v", "--verbose", action="store_true")
     return parser
@@ -100,10 +114,11 @@ def resolve(args: argparse.Namespace, store: ConfigStore) -> Settings | None:
         client_id=config.client_id,
         device_name=config.device_name,
         grace=args.grace if args.grace is not None else config.lost_grace_seconds,
-        serve=args.serve,
+        serve=args.serve or args.ci,
         web_bind=args.web_bind or config.web_bind,
         web_port=args.web_port if args.web_port is not None else config.web_port,
         verbose=args.verbose,
+        ci=args.ci,
     )
 
 
@@ -115,6 +130,10 @@ def _print_state(state: LiveState) -> None:
 
 def _print_status(status: ConnectionStatus, detail: str) -> None:
     print("# %s %s" % (status.value, detail), file=sys.stderr, flush=True)
+
+
+def _log_status(status: ConnectionStatus, detail: str) -> None:
+    log.info("connexion : %s %s", status.value, detail)
 
 
 async def run(settings: Settings, store: ConfigStore) -> int:
@@ -134,7 +153,7 @@ async def run(settings: Settings, store: ConfigStore) -> int:
         last_ip=store.config.last_ip or None,
         grace_seconds=settings.grace,
         on_state=on_state,
-        on_status=_print_status,
+        on_status=_log_status if settings.ci else _print_status,
         on_ip=lambda ip: store.update(last_ip=ip),  # mémorise la dernière IP qui a fonctionné
     )
     if server is not None:
@@ -149,7 +168,10 @@ async def run(settings: Settings, store: ConfigStore) -> int:
             log.error(message.replace("\n", " "))
             print(message, file=sys.stderr)
             return 2
-        print("# OBS : Source navigateur → %s" % server.url, file=sys.stderr, flush=True)
+        if settings.ci:
+            log.info("page pour OBS : %s", server.url)
+        else:
+            print("# OBS : Source navigateur → %s" % server.url, file=sys.stderr, flush=True)
     try:
         await client.run()
     finally:
@@ -198,24 +220,26 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(asdict(store.config), indent=2, ensure_ascii=False))
         return 0
     # le journal s'ouvre avant la lecture de la config : ses avertissements y figurent
-    log_path = setup_logging(store.directory, args.verbose)
+    level = args.loglevel if args.loglevel is not None else (2 if args.ci else None)
+    log_path = setup_logging(store.directory, args.verbose, level)
     store.load()
-    if not args.headless:
+    if not (args.headless or args.ci):
         return _main_window(args, store)
     settings = resolve(args, store)
     if settings is None:
         print(
             "Indiquez le PC EasyWorship une première fois :\n"
-            "  python -m ew_to_obs --host NOM_DU_PC --serve\n"
+            "  python -m ew_to_obs --ci --host NOM_DU_PC\n"
             "(il sera mémorisé dans %s)" % store.path,
             file=sys.stderr,
         )
         return 2
     log.info("démarrage : PC EW %s, configuration %s", settings.host, store.path)
-    print(
-        "# configuration : %s ; journal : %s" % (store.path, log_path or "indisponible"),
-        file=sys.stderr,
-    )
+    if not settings.ci:
+        print(
+            "# configuration : %s ; journal : %s" % (store.path, log_path or "indisponible"),
+            file=sys.stderr,
+        )
     try:
         return asyncio.run(run(settings, store))
     except KeyboardInterrupt:

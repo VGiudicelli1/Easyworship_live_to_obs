@@ -25,6 +25,8 @@ Un utilisateur télécharge **un installeur** depuis la page *Releases* du dép�
 
 Objectif multiplateforme confirmé par le mainteneur : mêmes sources, matrice CI sur les trois OS. Priorité de livraison : macOS, puis Windows, puis Linux.
 
+**Mode service** : `ew_to_obs --ci --host NOM --loglevel 2 2>> ew_logs.log` (sans fenêtre) ; modèles de démarrage automatique (launchd, systemd, tâche planifiée Windows) dans `packaging/autostart/`.
+
 ## Étapes
 
 ### 1. Structure du dépôt

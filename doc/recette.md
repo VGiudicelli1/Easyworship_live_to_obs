@@ -532,6 +532,20 @@ Prérequis : une Release publiée par tag (`doc/build_et_installation.md`), ou l
 - **Faire** : noter la taille de chaque livrable et le délai avant l'apparition de la fenêtre.
 - ☐ OK ☐ KO — notes :
 
+### R-108 · Mode service `--ci` (P1)
+- **Faire** : `python -m ew_to_obs --ci --host NOM_DU_PC_EW --loglevel 2 2>> ew_logs.log` (ou l'exécutable installé), sans fenêtre.
+- **Attendu** : aucune fenêtre ; OBS reçoit le texte ; `ew_logs.log` contient les connexions/états (jamais le texte des diapos) ; Ctrl+C ou fin de session arrête proprement.
+- ☐ OK ☐ KO — notes :
+
+### R-109 · Démarrage automatique en arrière-plan (P1)
+- **Faire** : installer un des modèles de `packaging/autostart/` (launchd sur le Mac d'OBS), redémarrer la machine **avant** d'ouvrir EW, puis ouvrir EW.
+- **Attendu** : le service se connecte tout seul dès qu'EW est là (reconnexion, port redécouvert) ; la source navigateur d'OBS affiche le texte sans action.
+- ☐ OK ☐ KO — notes :
+
+### R-110 · Niveaux `--loglevel` 0 à 3 (P3)
+- **Attendu** : 0 erreurs seules, 1 avertissements, 2 connexions et états, 3 détails ; stdout reste vide en `--ci`.
+- ☐ OK ☐ KO
+
 ---
 
 ## 6. Longue durée

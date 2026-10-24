@@ -1,0 +1,11 @@
+[Unit]
+Description=Easyworship vers OBS
+After=network-online.target
+
+[Service]
+ExecStart=%h/ew_to_obs/ew_to_obs --ci --host NOM_DU_PC_EW.local --loglevel 2
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
