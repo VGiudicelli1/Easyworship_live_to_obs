@@ -161,12 +161,7 @@ def test_busy_port_raises_a_clear_error():
     run(scenario())
 
 
-def test_url_hides_wildcard_address():
-    server = WebServer(StateHub(), "0.0.0.0", 8123)
-    assert server.url == "http://localhost:8123/"
-
-
-def test_default_bind_is_local_only():
+def test_web_server_class_default_bind_is_local_only():
     async def scenario():
         _, server = await started()
         assert server.host == "127.0.0.1"
@@ -222,3 +217,11 @@ def test_port_zero_reports_the_real_port():
         await server.stop()
 
     run(scenario())
+
+
+def test_url_uses_the_machine_name_when_listening_on_the_whole_network(monkeypatch):
+    monkeypatch.setattr("socket.gethostname", lambda: "mac-obs.local")
+    hub = StateHub()
+    assert WebServer(hub, "0.0.0.0", 8000).url == "http://mac-obs.local:8000/"
+    assert WebServer(hub, "127.0.0.1", 8000).url == "http://localhost:8000/"
+    assert WebServer(hub, "192.168.1.5", 8001).url == "http://192.168.1.5:8001/"

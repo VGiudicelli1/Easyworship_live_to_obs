@@ -9,7 +9,14 @@ from pathlib import Path
 
 import pytest
 
-from ew_to_obs.config import Config, ConfigStore, clean, default_config_dir
+from ew_to_obs.config import (
+    Config,
+    ConfigStore,
+    clean,
+    default_config_dir,
+    default_device_name,
+    local_hostname,
+)
 from ew_to_obs.logs import LOG_NAME, setup_logging
 
 
@@ -124,7 +131,7 @@ def test_invalid_fields_fall_back_individually_and_valid_ones_are_kept():
     )
     assert config.ew_host == "PC-REGIE" and config.web_bind == "0.0.0.0"
     assert config.last_ip == "" and config.web_port == 8000
-    assert config.lost_grace_seconds == 2.0 and config.device_name == "EasyWorship vers OBS"
+    assert config.lost_grace_seconds == 2.0 and config.device_name == default_device_name()
     assert len(warnings) >= 5
     assert any("ré-accepter" in w for w in warnings)  # client_id invalide : nouvelle identité
 
@@ -234,3 +241,23 @@ def test_saved_file_is_readable_json_with_all_fields(tmp_path):
         "serve",
         "log_level",
     }
+
+
+def test_default_device_name_shows_the_machine_name_and_fits_in_ew(monkeypatch):
+    monkeypatch.setattr("socket.gethostname", lambda: "thinkpad-epu")
+    assert default_device_name() == "ew2obs (thinkpad-epu)"
+    assert Config().device_name == "ew2obs (thinkpad-epu)"
+    monkeypatch.setattr("socket.gethostname", lambda: "x" * 100)
+    assert len(default_device_name()) <= 40
+    assert clean({"device_name": default_device_name()})[0].device_name == default_device_name()
+
+
+def test_old_default_device_name_is_replaced_but_a_custom_one_is_kept(monkeypatch):
+    monkeypatch.setattr("socket.gethostname", lambda: "mac-obs")
+    assert clean({"device_name": "EasyWorship vers OBS"})[0].device_name == "ew2obs (mac-obs)"
+    assert clean({"device_name": "Régie"})[0].device_name == "Régie"
+
+
+def test_web_listens_on_the_whole_local_network_by_default():
+    assert Config().web_bind == "0.0.0.0"
+    assert local_hostname()

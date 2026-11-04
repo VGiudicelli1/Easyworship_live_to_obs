@@ -82,9 +82,9 @@ captures complémentaires.
 ### R-01 · Premier lancement et appairage (P1)
 - **Préparer** : aucune configuration (supprimer le dossier de §0.4 ou `--config-dir` neuf). EW ouvert.
 - **Faire** : `python -m ew_to_obs --host NOM_DU_PC_EW --serve`.
-- **Attendu** : message « acceptez la télécommande « EasyWorship vers OBS » sur le PC EasyWorship » ; **une
+- **Attendu** : message « acceptez la télécommande « ew2obs (NOM_DE_LA_MACHINE) » sur le PC EasyWorship » ; **une
   demande apparaît dans EW** ; après acceptation, l'état passe à *connected* en < 2 s ; `config.json` et
-  `ew_to_obs.log` créés ; l'adresse `http://localhost:8000/` est affichée.
+  `ew_to_obs.log` créés ; l'adresse `http://NOM_DE_LA_MACHINE:8000/` est affichée.
 - **Relever** : le texte exact de la demande dans EW (nom affiché ?), le temps entre l'acceptation et la connexion.
 - ☐ OK ☐ KO — notes :
 
@@ -172,7 +172,7 @@ captures complémentaires.
 ### R-15 · Pare-feu et réseau (P2)
 - **Faire** : noter toute fenêtre du pare-feu (Mac ou Windows) au lancement ; tester réseau Wi‑Fi invité
   / VLAN s'il existe.
-- **Attendu** : aucune fenêtre bloquante en usage normal (écoute sur `127.0.0.1` seulement) ; si le
+- **Attendu** : aucune fenêtre bloquante en usage normal (écoute sur `0.0.0.0` : Windows peut demander d'autoriser l'accès réseau privé) ; si le
   réseau isole les appareils, noter le message obtenu.
 - ☐ OK ☐ KO — notes :
 
@@ -590,8 +590,7 @@ Prérequis : une Release publiée par tag (`doc/build_et_installation.md`), ou l
 - ☐ OK ☐ KO — notes :
 
 ### R-72 · Sécurité de l'écoute réseau (P2)
-- **Attendu** : par défaut (`127.0.0.1`) la page n'est **pas** joignable depuis un autre appareil ; avec
-  `0.0.0.0` elle l'est (donc à réserver au réseau de confiance : aucune authentification).
+- **Attendu** : par défaut (`0.0.0.0`) la page est joignable depuis un autre appareil du réseau local par `http://NOM_DE_LA_MACHINE:8000/` (le nom se résout-il depuis le Mac d'OBS ? sinon noter l'IP) ; avec `--web-bind 127.0.0.1` elle ne l'est plus. Aucune authentification : réseau de confiance seulement.
 - ☐ OK ☐ KO
 
 ### R-73 · Autres systèmes (P3)

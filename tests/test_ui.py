@@ -18,7 +18,7 @@ tk = pytest.importorskip("tkinter")
 
 from ew_to_obs import ui  # noqa: E402
 from ew_to_obs.client import ConnectionStatus  # noqa: E402
-from ew_to_obs.config import ConfigStore  # noqa: E402
+from ew_to_obs.config import ConfigStore, local_hostname  # noqa: E402
 from ew_to_obs.live import LiveState  # noqa: E402
 from ew_to_obs.service import Service, Snapshot  # noqa: E402
 
@@ -236,9 +236,9 @@ def test_window_with_the_real_service_follows_ew_end_to_end(root, tmp_path):
             lambda: (pump(root, 0.05), app.preview_var.get() == "Que précieux est ton amour")[1],
             what="aperçu",
         )
-        assert app.url_var.get().startswith("http://localhost:") and app.url_var.get().endswith(
-            "?lines=4"
-        )
+        assert app.url_var.get().startswith(
+            "http://%s:" % local_hostname()
+        ) and app.url_var.get().endswith("?lines=4")
         ew.call(ew.ew.select(2))
         wait_for(
             lambda: (pump(root, 0.05), app.preview_var.get() == "deuxième")[1], what="aperçu 2"

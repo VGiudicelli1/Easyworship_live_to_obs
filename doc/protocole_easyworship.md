@@ -110,7 +110,7 @@ Conséquences :
 * Un `uid` inconnu **n'est pas refusé** : EW laisse la connexion ouverte et attend la décision de l'opérateur. Le client doit **rester connecté et continuer les heartbeats** (≥ 1 toutes les 3 s) pendant l'attente, et afficher « En attente d'acceptation sur le PC EasyWorship ».
 * Un `uid` déjà accepté reçoit `paired` immédiatement (capture du §7 avec l'`uid` de la V1). **Confirmé par le mainteneur** : un appareil enregistré dans EW le reste durablement (jusqu'à révocation, voir §9).
 * Délai d'attente maximal d'EW avant refus/abandon : **inconnu** (non testé au-delà de 9 s). Cas « refusé » par l'opérateur : non testé, message attendu inconnu.
-* `device_name` est probablement le libellé montré à l'opérateur dans la demande : choisir un nom explicite (« EasyWorship vers OBS »).
+* `device_name` est probablement le libellé montré à l'opérateur dans la demande : choisir un nom explicite (« ew2obs (NOM_DE_LA_MACHINE) »).
 * Le port TCP de la télécommande valait **57395 dans les deux captures** (même EW, sessions différentes) : il n'est peut-être pas aussi dynamique qu'annoncé, mais ne pas s'y fier ; garder la découverte mDNS.
 * Cette capture ajoute 27 changements de présentation (111 `slideInfo`) sans écart avec le §7 : mêmes champs, mêmes types, `slideInfo` dans le désordre, aucune diapo vide, aucune diapo modifiée ; `logo`/`black`/`clear` toujours faux.
 

@@ -54,7 +54,7 @@ python -m ew_to_obs --headless --host NOM_DU_PC_EW                   # sans fen�
 
 Sous-titres sur les scènes caméra d'OBS (cas d'usage prévu) :
 
-1. Créer **une** source *Navigateur* avec l'adresse `http://localhost:8000/?lines=4`, de la taille du bandeau voulu (ex. 1920 × 360), placée en bas de l'image. Le fond de la page est transparent ; le cadre du texte est gris translucide, texte blanc.
+1. Créer **une** source *Navigateur* avec l'adresse `http://NOM_DE_LA_MACHINE:8000/?lines=4` (affichée dans la fenêtre ; `localhost` si OBS est sur la même machine), de la taille du bandeau voulu (ex. 1920 × 360), placée en bas de l'image. Le fond de la page est transparent ; le cadre du texte est gris translucide, texte blanc.
 2. Dans chaque scène caméra : *Ajouter une source existante* → cette même source (un seul navigateur, une seule connexion).
 3. Ne pas éteindre la source quand elle n'est pas visible : elle reste à jour et le texte apparaît tout de suite au changement de scène.
 

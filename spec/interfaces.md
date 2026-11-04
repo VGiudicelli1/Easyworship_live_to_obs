@@ -33,7 +33,7 @@ class EwClient:
 | `GET /ws` | Mise à niveau WebSocket (ping serveur toutes les 20 s) |
 | `GET /favicon.ico` | `204` (pas d'icône) ; toute autre route : `404` |
 
-URL à saisir dans OBS : `http://localhost:<port>/` (application sur le Mac d'OBS) ou `http://<nom-du-pc-ew>:<port>/` (application sur le PC EW, écoute réseau activée) (par défaut port 8000), affichée dans l'UI avec bouton « copier ». 
+URL à saisir dans OBS : `http://<nom-de-la-machine-de-l'application>:<port>/` (l'application écoute sur tout le réseau local ; `localhost` suffit si OBS est sur la même machine) (par défaut port 8000), affichée dans l'UI avec bouton « copier ». 
 
 **Réglages par l'URL** (implémentés, valeurs invalides ignorées ; `#` s'écrit `%23`, ou omis : `bg=003366`) :
 
@@ -76,7 +76,7 @@ Une seule page (Tkinter), ouverte par défaut par `python -m ew_to_obs` ; pas de
 │ État               ● Connecté à EasyWorship                   │
 │ (message à lire absolument, en gras, si besoin)               │
 │ Navigateurs (OBS)  1 connecté                                 │
-│ Adresse pour OBS   [ http://localhost:8000/?lines=4 ] [Copier]│
+│ Adresse pour OBS   [ http://mac-obs.local:8000/?lines=4 ] [Copier]│
 │ Réglages de la page [ lines=4                        ]        │
 │ Port de la page    [ 8000 ]                                   │
 │ Aperçu             ┌──────────────────────────────────┐       │
@@ -107,9 +107,9 @@ Dossier de configuration de l'OS (`~/Library/Application Support/ew_to_obs/` sur
   "ew_host": "PC-REGIE",
   "last_ip": "192.168.1.78",
   "client_id": "0b6c0f3e-…",
-  "device_name": "EasyWorship vers OBS",
+  "device_name": "ew2obs (NOM_DE_LA_MACHINE)",
   "web_port": 8000,
-  "web_bind": "127.0.0.1",
+  "web_bind": "0.0.0.0",
   "lost_grace_seconds": 2.0,
   "obs_query": "lines=4"
 }

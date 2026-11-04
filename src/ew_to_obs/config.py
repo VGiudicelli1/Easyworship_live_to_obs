@@ -16,6 +16,7 @@ import json
 import logging
 import os
 import re
+import socket
 import sys
 import uuid
 from dataclasses import asdict, dataclass, field, fields
@@ -34,6 +35,23 @@ _QUERY = re.compile(
 )  # réglages de la page, sans espace ni guillemet
 
 
+OLD_DEVICE_NAME = "EasyWorship vers OBS"  # ancien nom par défaut, remplacé à la lecture
+
+
+def local_hostname() -> str:
+    """Nom de cette machine (celui qu'on tape dans OBS : http://NOM:8000/)."""
+    try:
+        return socket.gethostname().strip() or "localhost"
+    except OSError:
+        return "localhost"
+
+
+def default_device_name() -> str:
+    """Nom de la télécommande montré dans EW : « ew2obs (NOM_DE_LA_MACHINE) », 40 caractères max."""
+    host = local_hostname()
+    return "ew2obs (%s)" % (host[:28] + "…" if len(host) > 29 else host)
+
+
 def new_client_id() -> str:
     return str(uuid.uuid4())
 
@@ -44,9 +62,9 @@ class Config:
     ew_host: str = ""  # nom (ou IP) du PC EasyWorship
     last_ip: str = ""  # dernière IPv4 qui a fonctionné, tentée en premier
     client_id: str = field(default_factory=new_client_id)
-    device_name: str = "EasyWorship vers OBS"  # nom montré à l'opérateur dans EW
+    device_name: str = field(default_factory=default_device_name)  # nom montré dans EW
     web_port: int = 8000
-    web_bind: str = "127.0.0.1"
+    web_bind: str = "0.0.0.0"  # tout le réseau local (OBS peut être sur une autre machine)
     lost_grace_seconds: float = 2.0
     obs_query: str = "lines=4"  # réglages de la page ajoutés à l'adresse donnée à OBS
     serve: bool = False  # mode sans fenêtre : servir la page sans avoir à passer --serve
@@ -120,7 +138,9 @@ def clean(raw: dict) -> tuple[Config, list[str]]:
             )
     if "device_name" in raw:
         value = raw["device_name"]
-        if isinstance(value, str) and 1 <= len(value.strip()) <= 40:
+        if value == OLD_DEVICE_NAME:
+            pass  # ancien nom par défaut : remplacé par « ew2obs (NOM) »
+        elif isinstance(value, str) and 1 <= len(value.strip()) <= 40:
             config.device_name = value.strip()
         else:
             reject("device_name", value)

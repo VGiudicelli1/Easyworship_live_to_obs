@@ -8,7 +8,7 @@ import os
 from pathlib import Path
 
 from ew_to_obs.__main__ import build_parser, resolve, run
-from ew_to_obs.config import ConfigStore
+from ew_to_obs.config import ConfigStore, default_device_name
 from fake_ew import FakeEw
 
 SRC = Path(__file__).resolve().parents[1] / "src"
@@ -58,7 +58,7 @@ def test_runtime_options_apply_to_this_run_only(tmp_path):
     )
     assert (settings.web_port, settings.grace, settings.web_bind) == (9001, 5, "0.0.0.0")
     again = resolve(parse(), store_for(tmp_path))
-    assert (again.web_port, again.grace, again.web_bind) == (8000, 2.0, "127.0.0.1")
+    assert (again.web_port, again.grace, again.web_bind) == (8000, 2.0, "0.0.0.0")
 
 
 def test_identity_and_device_name_can_be_set_explicitly_and_are_kept(tmp_path):
@@ -118,7 +118,7 @@ def test_two_runs_against_a_fake_ew_reuse_the_identity_and_the_last_ip(tmp_path)
     ew = asyncio.run(asyncio.wait_for(scenario(), 20))
     first, second = ew.connects[0], ew.connects[1]
     assert first["uid"] == second["uid"]  # même identité : l'appairage est conservé
-    assert first["device_name"] == "EasyWorship vers OBS"
+    assert first["device_name"] == default_device_name()
     saved = store_for(tmp_path).config
     assert saved.ew_host == "127.0.0.1" and saved.last_ip == "127.0.0.1"
 

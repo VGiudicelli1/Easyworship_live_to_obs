@@ -47,7 +47,7 @@ def ew():
 def make_service(tmp_path, ew_port, host="127.0.0.1", web_port=0):
     store = ConfigStore(tmp_path / "cfg")
     store.load()
-    store.update(ew_host=host, web_port=web_port)
+    store.update(ew_host=host, web_port=web_port, web_bind="127.0.0.1")
     return Service(store, ew_port=ew_port)
 
 

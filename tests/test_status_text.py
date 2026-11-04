@@ -5,7 +5,7 @@ from ew_to_obs.live import LiveState
 from ew_to_obs.service import Snapshot
 from ew_to_obs.status_text import PREVIEW_MAX, browsers_text, describe, preview_text
 
-DEVICE = "EasyWorship vers OBS"
+DEVICE = "ew2obs (PC-REGIE)"
 
 
 def snap(**values):

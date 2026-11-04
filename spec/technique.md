@@ -125,7 +125,7 @@ Un seul message JSON : `{"visible": bool, "text": str}`. Détail dans `spec/inte
 * Latence diapo → OBS < 1 s.
 * Reconnexion automatique à EW ; l'application ne plante pas si EW est absent au démarrage.
 * Aucun accès internet requis à l'exécution.
-* Écoute web par défaut sur `127.0.0.1:8000` (cas actuel : OBS et application sur le même Mac). Option « accessible sur le réseau » (`0.0.0.0`) pour la variante où l'application tourne sur le PC Windows d'EW ; documenter alors le pare-feu.
+* Écoute web par défaut sur `0.0.0.0:8000` (tout le réseau local, voulu par le mainteneur ; `--web-bind 127.0.0.1` pour la limiter à la machine). Page en lecture seule, sans authentification ; documenter le pare-feu. Nom de la télécommande dans EW : `ew2obs (NOM_DE_LA_MACHINE)`.
 * **Multiplateforme** : Python + bibliothèques pures (asyncio, aiohttp, Tkinter) ; aucun chemin ni séparateur codé en dur ; tests et build en CI sur macOS, Windows et Linux.
 * **Démarrage automatique** : Windows (dossier Démarrage ou clé `Run`), macOS (LaunchAgent / Éléments de connexion), Linux (`~/.config/autostart`) via une petite fonction par OS, optionnelle.
 * Aucune écriture dans le dossier d'installation.

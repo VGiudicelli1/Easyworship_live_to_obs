@@ -15,6 +15,7 @@ from pathlib import Path
 
 from aiohttp import WSMsgType, web
 
+from .config import local_hostname
 from .live import LiveState
 
 log = logging.getLogger("ew_to_obs.web")
@@ -103,7 +104,10 @@ class WebServer:
 
     @property
     def url(self) -> str:
-        shown = "localhost" if self.host in ("127.0.0.1", "0.0.0.0", "::") else self.host
+        if self.host in ("0.0.0.0", "::"):
+            shown = local_hostname()  # écoute sur tout le réseau : l'adresse à saisir dans OBS
+        else:
+            shown = "localhost" if self.host == "127.0.0.1" else self.host
         return "http://%s:%d/" % (shown, self.port)
 
     async def start(self) -> None:
