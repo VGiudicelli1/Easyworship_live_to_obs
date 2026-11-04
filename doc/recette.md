@@ -547,7 +547,7 @@ Prérequis : une Release publiée par tag (`doc/build_et_installation.md`), ou l
 - ☐ OK ☐ KO
 
 ### R-111 · Installation à partir des sources et `--saveconf` (P1)
-- **Faire** : sur le PC cible, `git clone`, `python3.12 -m venv .venv`, activer, `pip install -r venv/requirements.txt`, puis `python -m ew_to_obs --host NOM --serve --loglevel 2 --saveconf`.
+- **Faire** : sur le PC cible, `git clone`, `python3.12 -m venv .venv`, activer, `pip install -r venv/requirements.txt` puis `pip install -e . --no-deps`, puis `python -m ew_to_obs --host NOM --serve --loglevel 2 --saveconf`.
 - **Attendu** : installation sans erreur (Windows : roues précompilées d'aiohttp) ; rien ne démarre ; `config.json` contient le PC, `serve: true`, `log_level: 2` ; `python -m ew_to_obs --headless` seul se connecte ensuite à EW et sert la page.
 - ☐ OK ☐ KO — notes :
 

@@ -28,7 +28,8 @@ Objectif : **une seule application**, simple, qui se souvient du PC EasyWorship,
 git clone https://github.com/vgiudicelli1/easyworship_live_to_obs && cd easyworship_live_to_obs
 python3.12 -m venv .venv
 .venv\Scripts\activate                  # macOS/Linux : source .venv/bin/activate
-pip install -r venv/requirements.txt
+pip install -r venv/requirements.txt     # dépendances épinglées (pip-compile venv/requirements.in)
+pip install -e . --no-deps               # l'application elle-même (le code est dans src/)
 python -m ew_to_obs --host NOM_DU_PC_EW --serve --loglevel 2 --saveconf   # enregistre la config, ne démarre pas
 python -m ew_to_obs --headless --serve                                    # ce que lance le démarrage automatique
 ```

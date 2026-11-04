@@ -1,6 +1,6 @@
 # Démarrage automatique en arrière-plan (sans fenêtre)
 
-Usage retenu : **installation à partir des sources** (`git clone`, `.venv`, `pip install -r venv/requirements.txt`),
+Usage retenu : **installation à partir des sources** (`git clone`, `.venv`, `pip install -r venv/requirements.txt`, `pip install -e . --no-deps`),
 une fois `python -m ew_to_obs --host NOM --serve --loglevel 2 --saveconf` passé (enregistre la configuration sans
 démarrer), puis lancement au démarrage de la machine par : `python -m ew_to_obs --headless --serve`.
 
