@@ -4,10 +4,14 @@ import asyncio
 import contextlib
 import json
 import logging
+import os
+from pathlib import Path
 
 from ew_to_obs.__main__ import build_parser, resolve, run
 from ew_to_obs.config import ConfigStore
 from fake_ew import FakeEw
+
+SRC = Path(__file__).resolve().parents[1] / "src"
 
 
 def parse(*argv):
@@ -205,6 +209,7 @@ def test_ci_mode_runs_as_a_service_and_logs_on_stderr(tmp_path):
             *["--loglevel", "2", "--config-dir", str(tmp_path / "cfg")],
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
+            env={**os.environ, "PYTHONPATH": str(SRC)},  # fonctionne aussi sans « pip install -e »
         )
         try:
             page = b""

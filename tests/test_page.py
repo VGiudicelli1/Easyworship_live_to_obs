@@ -144,7 +144,7 @@ def test_when_there_is_really_no_room_the_text_is_clipped_but_never_leaves_the_s
 def test_short_text_is_big_and_bigger_screens_give_bigger_text(browser, server):
     sizes = []
     for width, height in ((640, 360), (1920, 1080)):
-        page = open_page(browser, server, width=width, height=height)
+        page = open_page(browser, server, "?max=1000", width=width, height=height)  # sans plafond
         server.publish(LiveState(True, "Amen"))
         shown(page, "Amen")
         sizes.append(metrics(page)["font"])
@@ -220,7 +220,7 @@ def test_style_comes_from_the_url_and_bad_values_are_ignored(browser, server):
     assert style["align"] == "left" and style["padding"] == "5px" and style["radius"] == "0px"
     assert style["font"] <= 40
     top = page.evaluate("document.getElementById('text').getBoundingClientRect().top")
-    assert top <= 25  # valign=top (marge 20 px)
+    assert top <= 30  # valign=top (marge 20 pt, comme la V2)
     page.close()
 
     page = open_page(
@@ -231,7 +231,28 @@ def test_style_comes_from_the_url_and_bad_values_are_ignored(browser, server):
         """() => { const s = getComputedStyle(document.getElementById('text'));
                    return [s.backgroundColor, s.backgroundImage, s.paddingTop]; }"""
     )
-    assert style == ["rgba(127, 127, 127, 0.7)", "none", "20px"]
+    assert style[:2] == ["rgba(127, 127, 127, 0.7)", "none"]
+    assert abs(float(style[2][:-2]) - 20 * 96 / 72) < 0.01  # padding par défaut : 20 pt (V2)
+    page.close()
+
+
+def test_font_is_capped_at_100pt_like_the_v2_page(browser, server):
+    """Texte court dans un grand écran : la police s'arrête à 100 pt (133,33 px), comme en V2 ;
+    ?max=PX permet de changer ce plafond."""
+    page = open_page(browser, server)
+    page.set_viewport_size({"width": 1920, "height": 1080})
+    server.publish(LiveState(True, "Amen"))
+    shown(page, "Amen")
+    size = page.evaluate("parseFloat(getComputedStyle(document.getElementById('text')).fontSize)")
+    assert 130 < size <= 100 * 96 / 72 + 0.01
+    page.close()
+
+    page = open_page(browser, server, "?max=200")
+    page.set_viewport_size({"width": 1920, "height": 1080})
+    server.publish(LiveState(True, "Amen"))
+    shown(page, "Amen")
+    size = page.evaluate("parseFloat(getComputedStyle(document.getElementById('text')).fontSize)")
+    assert size > 150
     page.close()
 
 

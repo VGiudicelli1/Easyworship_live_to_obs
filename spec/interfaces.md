@@ -41,11 +41,11 @@ URL à saisir dans OBS : `http://localhost:<port>/` (application sur le Mac d'OB
 |---|---|---|
 | `bg` | couleur de fond du cadre de texte (`transparent` pour aucun) | `rgba(127,127,127,.7)` |
 | `color` | couleur du texte | `#fff` |
-| `padding` / `margin` / `radius` | marge intérieure, marge autour de la zone, arrondi (px) | 20 / 20 / 10 |
+| `padding` / `margin` / `radius` | marge intérieure, marge autour de la zone, arrondi (px) | 20 pt / 20 pt / 10 pt (= V2) |
 | `align` | `left`, `center`, `right` (position et alignement du texte) | `center` |
 | `valign` | `top`, `middle`, `bottom` (ex. bandeau en bas : `?valign=bottom`) | `middle` |
 | `font` | famille de police (lettres, chiffres, espaces, virgules, guillemets) | police système + emojis |
-| `max` | taille de police maximale (px) | taille de la zone |
+| `max` | taille de police maximale (px) | 133,33 px = 100 pt (= V2) |
 | `lines` | taille **stable** : la police ne dépasse pas celle qui fait tenir N lignes (ex. `lines=4` : un texte de 2 ou 4 lignes garde la même taille, au-delà elle diminue) | désactivé (taille ajustée à chaque diapo) |
 | `demo` | `?demo=1` ou `?demo=Mon%20texte` : aperçu du style sans application (aucun WebSocket) | — |
 

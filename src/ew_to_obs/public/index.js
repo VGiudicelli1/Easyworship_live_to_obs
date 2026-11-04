@@ -4,7 +4,7 @@ const stage = document.getElementById("stage");
 const box = document.getElementById("text");
 const params = new URLSearchParams(location.search);
 const MIN_FONT_PX = 8;
-let maxFontPx = Infinity;
+let maxFontPx = (100 * 96) / 72; // 100 pt, plafond de la V2 (?max=PX pour le changer)
 let referenceLines = 0; // ?lines=N : taille stable jusqu'à N lignes (voir fit)
 
 // --- réglages par l'URL (valeurs validées : jamais de contenu injecté tel quel dans le CSS) ---
