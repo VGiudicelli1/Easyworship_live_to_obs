@@ -136,3 +136,39 @@ def test_pairing_messages_and_unknown_actions():
 def test_empty_text_slide_is_a_valid_visible_state():
     s = LiveSession()
     assert load(s, texts={11: ""}) == LiveState(True, "")
+
+
+def test_live_slide_is_requested_first():
+    s = LiveSession()
+    s.on_message(status(13, liverev="100"))
+    result = s.on_message(*live_data("100", [(11, 1), (12, 1), (13, 1), (14, 1)]))
+    assert [m["slide_rowid"] for m in result.send][0] == 13
+    assert sorted(m["slide_rowid"] for m in result.send) == [11, 12, 13, 14]
+
+
+def test_revisiting_a_known_presentation_needs_no_request_and_shows_at_once():
+    s = LiveSession()
+    load(s, liverev="100", slides=((11, 1), (12, 1)), texts={11: "A", 12: "B"})
+    load(s, liverev="200", slides=((21, 1),), texts={21: "Autre"})  # une autre présentation
+    s.on_message(status(11, liverev="300"))
+    result = s.on_message(*live_data("300", [(11, 1), (12, 1)], pres=1))
+    assert result.send == []  # déjà connues : aucune requête
+    assert result.state == LiveState(True, "A")  # affiché dès le LiveData
+
+
+def test_changed_revision_is_fetched_again():
+    s = LiveSession()
+    load(s, liverev="100", slides=((11, 1),), texts={11: "ancien"})
+    s.on_message(status(11, liverev="200"))
+    result = s.on_message(*live_data("200", [(11, 2)]))  # texte édité : nouvelle révision
+    assert [m["slide_rowid"] for m in result.send] == [11]
+    assert s.on_message(slide_info(11, 2, "nouveau")).state == LiveState(True, "nouveau")
+
+
+def test_ephemeral_negative_ids_are_never_reused():
+    s = LiveSession()
+    load(s, liverev="100", slides=((-5, 1),), texts={-5: "chant 1"})
+    s.on_message(status(-5, liverev="200"))
+    result = s.on_message(*live_data("200", [(-5, 1)]))
+    assert [m["slide_rowid"] for m in result.send] == [-5]  # même id, autre contenu possible
+    assert s.on_message(slide_info(-5, 1, "chant 2")).state == LiveState(True, "chant 2")

@@ -546,6 +546,11 @@ Prérequis : une Release publiée par tag (`doc/build_et_installation.md`), ou l
 - **Attendu** : 0 erreurs seules, 1 avertissements, 2 connexions et états, 3 détails ; stdout reste vide en `--ci`.
 - ☐ OK ☐ KO
 
+### R-113 · Latence de changement de diapo (P1)
+- **Faire** : lancer avec `--loglevel 2`. Dans EW, (a) passer plusieurs fois à la diapo suivante **dans la même présentation**, (b) passer à une **autre présentation** jamais affichée, (c) revenir sur une présentation déjà affichée. Chronométrer au ressenti dans OBS et relever dans le journal les lignes « état publié … N ms après le status d'EW ».
+- **Attendu** : (a) quasi instantané (< 30 ms mesuré) ; (b) 65 à 300 ms (réponse d'EW à `getSlideInfo`, incompressible) ; (c) < 30 ms. Si le ressenti est bien supérieur aux ms du journal, la lenteur est ailleurs (EW qui tarde à envoyer le `status`, source navigateur d'OBS : fréquence d'images, scène inactive) : noter la fréquence d'images de la source.
+- ☐ OK ☐ KO — notes (valeurs relevées) :
+
 ### R-111 · Installation à partir des sources et `--saveconf` (P1)
 - **Faire** : sur le PC cible, `git clone`, `python3.12 -m venv .venv`, activer, `pip install -r venv/requirements.txt` puis `pip install -e . --no-deps`, puis `python -m ew_to_obs --host NOM --serve --loglevel 2 --saveconf`.
 - **Attendu** : installation sans erreur (Windows : roues précompilées d'aiohttp) ; rien ne démarre ; `config.json` contient le PC, `serve: true`, `log_level: 2` ; `python -m ew_to_obs --headless` seul se connecte ensuite à EW et sert la page.

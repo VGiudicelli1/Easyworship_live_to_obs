@@ -14,13 +14,20 @@ NAMES = sorted(os.path.basename(p)[11:-6] for p in glob.glob(str(FIXTURES / "ew_
 def oracle_requests(name):
     """Nombre attendu de GetLiveData et de getSlideInfo, calculé directement sur la capture :
     un GetLiveData par liverev (≠ "0") vu dans un status, un getSlideInfo par diapo du premier
-    LiveData reçu pour ce liverev (le titre de présentation n'est jamais demandé)."""
+    LiveData reçu pour ce liverev (le titre de présentation n'est jamais demandé), sauf celles dont
+    le texte a déjà été reçu avec la même révision dans la même présentation (identifiants
+    positifs : réutilisées sans requête)."""
     live_data = slides = 0
     seen: set[str] = set()
     answered: set[str] = set()
+    received: set[tuple[int, int, int]] = set()  # (pres, rowid, révision) dont le texte est arrivé
+    pres = 0
     for rec in load(name):
         if rec["dir"] == "info" and rec.get("msg", {}).get("event") == "connected":
-            seen, answered = set(), set()
+            seen, answered, received = set(), set(), set()
+        elif rec["dir"] == "recv" and rec["msg"].get("action") == "slideInfo":
+            if pres > 0 and int(rec["msg"]["slide_rowid"]) > 0:
+                received.add((pres, int(rec["msg"]["slide_rowid"]), int(rec["msg"]["revision"])))
         elif rec["dir"] == "recv" and rec["msg"].get("action") == "status":
             rev = str(rec["msg"]["liverev"])
             if rev != "0" and rev not in seen:
@@ -30,7 +37,10 @@ def oracle_requests(name):
             rev = str(rec["decoded"]["liverev"])
             if rev in seen and rev not in answered:
                 answered.add(rev)
-                slides += rec["decoded"]["pres_len"]
+                pres = int(rec["decoded"]["pres_rowid"])
+                for ref in rec["decoded"]["slides"]:
+                    key = (pres, int(ref["rowid"]), int(ref["revision"]))
+                    slides += not (pres > 0 and key[1] > 0 and key in received)
     return live_data, slides
 
 

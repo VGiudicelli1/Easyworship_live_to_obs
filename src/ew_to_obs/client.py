@@ -16,6 +16,7 @@ import contextlib
 import logging
 import socket
 import sys
+import time
 import warnings
 from collections.abc import Awaitable, Callable, Sequence
 from enum import Enum
@@ -129,6 +130,7 @@ class EwClient:
         self._on_status = on_status
         self._on_ip = on_ip
         self.published = LiveState.hidden()
+        self._status_at: float | None = None  # réception du dernier « status » (mesure de latence)
         self.status = ConnectionStatus.SEARCHING
         self._grace_handle: asyncio.TimerHandle | None = None
         self._stopping = False
@@ -262,6 +264,8 @@ class EwClient:
         if message is None:
             log.debug("ligne illisible ignorée")
             return
+        if message.get("action") == "status":
+            self._status_at = time.monotonic()
         before = session.pairing
         result = session.on_message(message, extra)
         for outgoing in result.send:
@@ -288,7 +292,11 @@ class EwClient:
             return
         self.published = state
         # jamais le texte : le journal peut être joint à un rapport (recette, diagnostic)
-        log.info("état publié : visible=%s, %d caractères", state.visible, len(state.text))
+        delay = ""
+        if self._status_at is not None:  # écart avec le « status » d'EW : latence due à EW + nous
+            delay = ", %d ms après le status d'EW" % ((time.monotonic() - self._status_at) * 1000)
+            self._status_at = None
+        log.info("état publié : visible=%s, %d caractères%s", state.visible, len(state.text), delay)
         if self._on_state is not None:
             self._on_state(state)
 

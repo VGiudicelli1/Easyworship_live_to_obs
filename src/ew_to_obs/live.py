@@ -9,7 +9,10 @@ Logique pure, sans réseau ni horloge : on lui passe les messages reçus, elle r
 * un nouveau `liverev` vide le cache et fait tout recharger ;
 * rien en direct (`imagehash` vide, `liverev "0"`, diapo absente du LiveData) ou logo/noir/clear
   donne un état caché ;
-* tant que le texte d'une diapo n'est pas arrivé, on ne diffuse rien (ni texte périmé, ni vide).
+* tant que le texte d'une diapo n'est pas arrivé, on ne diffuse rien (ni texte périmé, ni vide) ;
+* latence : la diapo en direct est demandée en premier, et le texte d'une diapo déjà reçue
+  (mêmes `pres_rowid`, `rowid` et `revision`, identifiants positifs seulement) est réutilisé sans
+  nouvelle requête quand on revient sur une présentation déjà vue.
 """
 
 from __future__ import annotations
@@ -72,6 +75,10 @@ class LiveSession:
         self._refs: dict[str, SlideRef] = {}
         self._pending: dict[str, int] = {}
         self._texts: dict[str, str] = {}
+        self._pres_rowid = 0
+        # textes déjà reçus, gardés d'un rechargement à l'autre (jamais pour les identifiants
+        # négatifs, éphémères) : (pres_rowid, rowid, revision) → texte
+        self._known: dict[tuple[int, int, int], str] = {}
 
     def on_message(self, message: dict, extra: bytes = b"") -> Result:
         result = Result()
@@ -110,9 +117,16 @@ class LiveSession:
         if data.liverev != self._liverev or self._loaded:
             return  # réponse périmée ou doublon
         self._loaded = True
-        for ref in data.slides:
+        self._pres_rowid = data.pres_rowid
+        live = str((self._status or {}).get("slide_rowid"))
+        # la diapo en direct d'abord : EW répond une requête après l'autre
+        for ref in sorted(data.slides, key=lambda r: str(r.rowid) != live):
             key = str(ref.rowid)
             self._refs[key] = ref
+            known = self._known.get((data.pres_rowid, ref.rowid, ref.revision))
+            if known is not None:
+                self._texts[key] = known
+                continue
             self._pending[key] = ref.revision
             # Le titre de la présentation (diapo 0) ne sert pas : on n'en veut que le texte.
             result.send.append(get_slide_info_message(ref.rowid, ref.revision, data.pres_rowid))
@@ -123,7 +137,13 @@ class LiveSession:
         if revision is None or str(info.get("revision")) != str(revision):
             return  # titre de présentation, ou réponse à une requête d'un liverev précédent
         del self._pending[key]
-        self._texts[key] = normalize_text(str(info.get("content", "")))
+        text = normalize_text(str(info.get("content", "")))
+        self._texts[key] = text
+        ref = self._refs.get(key)
+        if ref is not None and ref.rowid > 0 and self._pres_rowid > 0:
+            if len(self._known) >= 5000:
+                self._known.clear()
+            self._known[(self._pres_rowid, ref.rowid, ref.revision)] = text
 
     def _recompute(self) -> LiveState | None:
         new = self._compute()
