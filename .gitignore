@@ -1,10 +1,18 @@
-captures/
+# Python
 __pycache__/
 *.pyc
-
-venv/*
-!venv/requirements.*.pytest_cache/
-.ruff_cache/
 *.egg-info/
+.pytest_cache/
+.ruff_cache/
 build/
 dist/
+
+# Environnements virtuels (le dossier venv/ du dépôt ne garde que les requirements)
+.venv/
+venv/*
+!venv/requirements.in
+!venv/requirements.txt
+
+# Captures brutes du protocole EW (peuvent contenir des textes privés ; seules les fixtures
+# anonymisées de tests/fixtures/ sont versionnées)
+captures/

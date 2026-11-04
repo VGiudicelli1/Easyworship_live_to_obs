@@ -549,17 +549,17 @@ Prérequis : une Release publiée par tag (`doc/build_et_installation.md`), ou l
 ### R-113 · Latence de changement de diapo (P1)
 - **Faire** : lancer avec `--loglevel 2`. Dans EW, (a) passer plusieurs fois à la diapo suivante **dans la même présentation**, (b) passer à une **autre présentation** jamais affichée, (c) revenir sur une présentation déjà affichée. Chronométrer au ressenti dans OBS et relever dans le journal les lignes « état publié … N ms après le status d'EW ».
 - **Attendu** : (a) quasi instantané (< 30 ms mesuré) ; (b) 65 à 300 ms (réponse d'EW à `getSlideInfo`, incompressible) ; (c) < 30 ms. Si le ressenti est bien supérieur aux ms du journal, la lenteur est ailleurs (EW qui tarde à envoyer le `status`, source navigateur d'OBS : fréquence d'images, scène inactive) : noter la fréquence d'images de la source.
-- ☐ OK ☐ KO — notes (valeurs relevées) :
+- ☑ OK (latence correcte dans OBS ; le retard perçu dans un navigateur était un artefact d'affichage du navigateur)
 
 ### R-111 · Installation à partir des sources et `--saveconf` (P1)
 - **Faire** : sur le PC cible, `git clone`, `python3.12 -m venv .venv`, activer, `pip install -r venv/requirements.txt` puis `pip install -e . --no-deps`, puis `python -m ew_to_obs --host NOM --serve --loglevel 2 --saveconf`.
 - **Attendu** : installation sans erreur (Windows : roues précompilées d'aiohttp) ; rien ne démarre ; `config.json` contient le PC, `serve: true`, `log_level: 2` ; `python -m ew_to_obs --headless` seul se connecte ensuite à EW et sert la page.
-- ☐ OK ☐ KO — notes :
+- ☑ OK (validé par le mainteneur, Windows, Python 3.15.2)
 
 ### R-112 · Tâche planifiée Windows au démarrage (P1)
 - **Faire** : `packaging\autostart\ew_to_obs_tache.cmd` en administrateur ; redémarrer le PC sans ouvrir de session si possible, puis ouvrir EW.
 - **Attendu** : le service tourne (page joignable depuis OBS), `ew_logs.log` sans erreur, accepté une fois dans EW puis plus de demande. Vérifier que la tâche SYSTEM utilise bien la config de l'utilisateur (`--config-dir`) et que Bonjour/pare-feu ne bloquent pas.
-- ☐ OK ☐ KO — notes :
+- ◐ Tâche créée par `ew_to_obs_tache.cmd` et service fonctionnel (validé par le mainteneur) ; **reste à vérifier : redémarrage du PC avant ouverture d'EW**.
 
 ---
 

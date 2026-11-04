@@ -9,10 +9,9 @@
 
 
 ## État actuel
-* `Makefile` : uniquement macOS, cible `dist/ew_to_txt.app` alors que la sortie PyInstaller s'appelle `ew_to_obs`, chemin `--paths lib/python3.8/site-packages` incompatible avec la CI en Python 3.12.
-* CI GitHub Actions : sur Ubuntu, installe les dépendances, lance `make`, `ls build`. **Pas d'artefact, pas de test, pas d'installeur.**
-* L'utilisateur doit recopier à la main `public/` dans l'application.
-* `requirements.txt` contient des paquets macOS.
+* **Installation de référence : à partir des sources** (`git clone`, venv, `pip install -r venv/requirements.txt`, `pip install -e . --no-deps`), avec démarrage automatique par tâche planifiée Windows : voir [notice_installation.md](notice_installation.md). Validée en réel sous Windows (Python 3.15.2).
+* **Exécutable PyInstaller, installeur Inno Setup et publication par tag** (`packaging/`, `.github/workflows/release.yml`) : écrits, build Linux essayé en local, **jamais lancés sous Windows ni macOS** (recette R-100 à R-107). Ne pas les présenter comme livrables tant que ces tests ne sont pas faits.
+* Les dépendances sont épinglées dans `venv/requirements.txt` (généré par `pip-compile venv/requirements.in`).
 
 ## Cible
 Un utilisateur télécharge **un installeur** depuis la page *Releases* du dépôt, l'exécute, lance « Easyworship → OBS » depuis le menu Démarrer / Applications.

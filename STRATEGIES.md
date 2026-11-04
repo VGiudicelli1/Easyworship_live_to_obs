@@ -62,9 +62,11 @@ Décisions à prendre pour repartir sur une application basique. Pour chaque poi
 
 ## S7. Gestion des branches
 
-1. Travail sur `claude/analyse_repo` (cette branche) : documentation uniquement.
+*(Réalisé : analyse sur `claude/analyse_repo`, implémentation sur `claude/ew_client`, pull request vers `main`.)*
+
+1. Travail sur `claude/analyse_repo` : documentation uniquement.
 2. Branche d'implémentation par étape du plan (`doc/plan_de_migration.md`), PR vers `main`.
-3. À la fin : tags `v1.0.0` (= `version1`), `v2.0.0-abandonné` (= `version2`) ; suppression de `link_flows`, `dev`, `version1`, `version2`.
+3. **Décision à prendre par le mainteneur, après la fusion** : poser les tags `v1.0.0` (= `version1`) et `v2.0.0-abandonné` (= `version2`) pour garder l'historique, puis supprimer `link_flows`, `dev`, `version1`, `version2`. Rien n'est supprimé automatiquement.
 
 ## S8. Ce qu'on ne fait pas (YAGNI)
 

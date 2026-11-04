@@ -6,14 +6,14 @@ Projet : afficher dans OBS (source navigateur) le texte de la diapo en direct d'
 Documentation, commentaires et messages de commit en **français** ; identifiants du code en anglais.
 
 ## Où trouver quoi
-* Besoin : `spec/metier.md` · retours : `spec/user_feedback.md` · architecture : `spec/technique.md` · interfaces : `spec/interfaces.md`
+* **Notices** : `doc/notice_installation.md`, `doc/notice_utilisation.md` (à tenir à jour avec toute option, tout message ou toute procédure modifiés) · Besoin : `spec/metier.md` · retours : `spec/user_feedback.md` · architecture : `spec/technique.md` · interfaces : `spec/interfaces.md`
 * Options et choix : `STRATEGIES.md` · protocole EW : `doc/protocole_easyworship.md` · build : `doc/build_et_installation.md`
-* Code historique (hors `main`) : branches `dev`/`version1` (client EW, **à réutiliser**), `version2` (page web `public/` à réutiliser, moteur widgets **à abandonner**), `link_flows` (ignorer).
+* Ancien code (V1 Tkinter, V2 widgets) : uniquement dans l'historique git / les branches `dev`, `version1`, `version2`, `link_flows` ; il n'est plus sur `main` et ne doit pas y revenir.
 
 ## Règles
 * Une seule application, volontairement basique. **Ne pas** réintroduire de moteur générique « widgets/flux/connecteurs ».
 * Cibles : **macOS, Windows, Linux** (même code ; ne pas utiliser d'API spécifique à un OS sans repli).
-* Topologie actuelle : EW sur un PC Windows, OBS **et l'application** sur un Mac. Variante envisagée : application sur le PC Windows d'EW, en démarrage automatique.
+* Topologie actuelle : l'application tourne sur le **PC Windows d'EW**, en démarrage automatique (tâche planifiée) ; OBS sur un Mac lit la page `http://NOM_DU_PC:8000/`. Variante : application sur le Mac d'OBS (fenêtre).
 * EW exige **Bonjour** sur son PC pour activer la télécommande (protocole exploité) ; ne pas le contourner.
 * L'application est en **lecture seule** vis-à-vis d'EasyWorship.
 * Le protocole EW est non documenté : toute modification de `ew_client` doit être couverte par un test sur trames rejouées. Ne pas inventer de messages.

@@ -8,57 +8,56 @@ Afficher dans **OBS** le texte de la diapo en direct d'**EasyWorship** (EW), via
 
 ## État du projet
 
-| Date | Statut |
-|:--:|:--|
-| 2024-06 | v1 : EW → fichier texte (testée en réel) |
-| 2024-12 | v2 : architecture « connecteurs » + sortie web, **abandonnée** (ne parle pas à EW) |
-| 2026-10 | **Analyse du dépôt et nouvelle spécification** (cette branche). Aucun code applicatif sur `main` pour l'instant |
-
-Objectif : **une seule application**, simple, qui se souvient du PC EasyWorship, avec un installeur.
+Application **fonctionnelle**, essayée en réel avec EasyWorship 7.4.1.9 (PC Windows) et OBS (Mac) : lecture de la diapo en direct, appairage, reconnexion automatique, page pour OBS, démarrage automatique sous Windows. Une seule application, volontairement basique, qui se souvient du PC EasyWorship. Ce qui reste à valider en conditions réelles est listé dans **[doc/recette.md](doc/recette.md)**.
 
 ## Prérequis
 
-* **EasyWorship 7** (testé : 7.4.1.9) avec la *télécommande* activée. Au premier lancement, **EW demande d'accepter la nouvelle télécommande** (appairage) sur le PC EasyWorship. EW exige que **Bonjour** (Apple) soit installé sur son PC pour activer cette télécommande.
+* **EasyWorship 7** (testé : 7.4.1.9) avec la *télécommande* activée. Au premier lancement, **EW demande d'accepter la télécommande** « ew2obs (nom de la machine) » (appairage, une seule fois). EW exige que **Bonjour** (Apple) soit installé sur son PC pour activer cette télécommande.
 * **OBS** avec une *Source navigateur*.
-* Application visée : macOS, Windows et Linux.
+* **Python 3.12 ou plus récent** (testé 3.12 à 3.15) sur macOS, Windows ou Linux.
 
-## Installation à partir des sources (usage recommandé, Windows ou Mac)
+## Démarrage rapide (Windows, sur le PC d'EasyWorship)
 
 ```
 git clone https://github.com/vgiudicelli1/easyworship_live_to_obs && cd easyworship_live_to_obs
-python3.12 -m venv .venv
-.venv\Scripts\activate                  # macOS/Linux : source .venv/bin/activate
-pip install -r venv/requirements.txt     # dépendances épinglées (pip-compile venv/requirements.in)
-pip install -e . --no-deps               # l'application elle-même (le code est dans src/)
-python -m ew_to_obs --host NOM_DU_PC_EW --serve --loglevel 2 --saveconf   # enregistre la config, ne démarre pas
-python -m ew_to_obs --headless --serve                                    # ce que lance le démarrage automatique
+py -3.12 -m venv .venv
+.venv\Scripts\activate.bat
+pip install -r venv/requirements.txt
+pip install -e . --no-deps
+python -m ew_to_obs --host localhost --serve --loglevel 2 --saveconf   # enregistre la config, ne démarre pas
+python -m ew_to_obs --headless                                          # 1er lancement : accepter la télécommande dans EW
+packaging\autostart\ew_to_obs_tache.cmd                                # (invite administrateur) démarrage automatique
 ```
 
-`--saveconf` fait de `--host`, `--serve`, `--loglevel`, `--web-port`, `--web-bind` et `--grace` les valeurs par défaut (fichier `config.json` du dossier utilisateur) ; le lancement du démarrage n'a alors plus rien à indiquer. **Windows** : `packaging\autostart\ew_to_obs_tache.cmd` (invite administrateur) crée la tâche « au démarrage du PC » ; autres systèmes : `packaging/autostart/`. Le premier lancement oblige à accepter la télécommande dans EasyWorship (une seule fois).
+Puis, dans OBS, une source *Navigateur* : `http://NOM_DU_PC_EW:8000/?lines=4`.
+
+**Notices** (en français, pas à pas) :
+
+* **[Notice d'installation](doc/notice_installation.md)** : Windows, Mac, Linux, démarrage automatique, mise à jour, désinstallation.
+* **[Notice d'utilisation](doc/notice_utilisation.md)** : déroulé d'un culte, réglage d'OBS, paramètres de la page, ce qui s'affiche, dépannage.
+
+## Ligne de commande
+
+```
+python -m ew_to_obs                                      # la fenêtre (Mac, usage manuel) : saisir le PC EW une fois
+python -m ew_to_obs --headless --serve                   # sans fenêtre, ce que lance le démarrage automatique
+python -m ew_to_obs --ci --host NOM --loglevel 2 2>> ew.log   # mode service (= --headless --serve), journal sur stderr
+python -m ew_to_obs --headless --host NOM                # sans page : une ligne JSON par changement de diapo
+python -m ew_to_obs --show-config                        # affiche la configuration (lecture seule)
+```
+
+Options : `--host`, `--serve`, `--loglevel 0..3`, `--web-port`, `--web-bind`, `--grace`, `--saveconf` (les enregistre comme valeurs par défaut puis quitte), `--config-dir`, `-v`. Voir [spec/interfaces.md](spec/interfaces.md). La configuration et le journal sont dans le dossier utilisateur de l'OS (`%APPDATA%\ew_to_obs`, `~/Library/Application Support/ew_to_obs`, `~/.config/ew_to_obs`).
 
 ## Développement
 
-Étapes 1 à 5 du [plan](doc/plan_de_migration.md) : le **client EasyWorship**, le **serveur web avec la page pour OBS**, la **configuration mémorisée** et la **fenêtre** (`src/ew_to_obs/`) sont écrits et testés **sans EasyWorship ni OBS réels** ; il reste le packaging (installeur). Tout ce qui reste à valider avec le vrai matériel est dans **[doc/recette.md](doc/recette.md)**.
-
 ```
-python -m venv venv && source venv/bin/activate     # Windows : venv\Scripts\activate
+python -m venv .venv && source .venv/bin/activate        # Windows : .venv\Scripts\activate.bat
 pip install -e ".[dev]"
-python -m pytest            # 211 tests ; 18 (page) ignorés sans Playwright, 20 (fenêtre) sans tkinter + écran (Linux, Xvfb)
+python -m pytest            # 207 tests ; 19 (page) ignorés sans Playwright, ceux de la fenêtre sans tkinter + écran (Linux : xvfb-run)
 ruff check src tests && ruff format --check src tests
-python -m ew_to_obs                                                  # la fenêtre : saisir le PC EW une fois, tout est mémorisé
-python -m ew_to_obs --headless --host NOM_DU_PC_EW --serve           # sans fenêtre, 1er lancement
-python -m ew_to_obs --headless --serve                               # sans fenêtre, ensuite : plus rien à saisir
-python -m ew_to_obs --ci --host NOM_DU_PC_EW --loglevel 2 2>> ew_logs.log   # mode service (= --headless --serve), à lancer au démarrage : modèles dans packaging/autostart/
-python -m ew_to_obs --headless --host NOM_DU_PC_EW                   # sans fenêtre ni page : une ligne JSON par changement de diapo
 ```
 
-Sous-titres sur les scènes caméra d'OBS (cas d'usage prévu) :
-
-1. Créer **une** source *Navigateur* avec l'adresse `http://NOM_DE_LA_MACHINE:8000/?lines=4` (affichée dans la fenêtre ; `localhost` si OBS est sur la même machine), de la taille du bandeau voulu (ex. 1920 × 360), placée en bas de l'image. Le fond de la page est transparent ; le cadre du texte est gris translucide, texte blanc.
-2. Dans chaque scène caméra : *Ajouter une source existante* → cette même source (un seul navigateur, une seule connexion).
-3. Ne pas éteindre la source quand elle n'est pas visible : elle reste à jour et le texte apparaît tout de suite au changement de scène.
-
-La scène OBS qui montre le live d'EasyWorship en plein écran n'est pas concernée par ce projet. Réglages par l'URL (`?valign=bottom&bg=rgba(0,0,0,.65)&color=white…`) : voir [spec/interfaces.md](spec/interfaces.md) ; `?lines=4` pour une taille de texte stable entre les diapos (voir [spec/interfaces.md](spec/interfaces.md)) ; `?demo=1` pour régler le style sans application. Tests dans un navigateur : `pip install -e ".[dev,browser]" && playwright install chromium`. Tests de la fenêtre (Linux) : `xvfb-run -a python -m pytest tests/test_ui.py` (paquet `python3-tk`). Sur Mac, la fenêtre demande tkinter (Python de python.org, ou `brew install python-tk`).
+Tests de la page dans un navigateur : `pip install -e ".[dev,browser]" && playwright install chromium`. Les tests rejouent des **captures réelles anonymisées** du protocole EW (`tests/fixtures/`) et utilisent un faux EW (`tests/fake_ew.py`). Intégration continue : un job Ubuntu à chaque push ; tous les systèmes et le navigateur sur les pull requests.
 
 | Module | Rôle |
 |---|---|
@@ -66,38 +65,37 @@ La scène OBS qui montre le live d'EasyWorship en plein écran n'est pas concern
 | `live.py` | logique pure : messages d'EW → état `(visible, texte)` |
 | `discovery.py` | résolution IPv4, port par mDNS (parallèle), connexion TCP |
 | `config.py`, `logs.py` | configuration JSON dans le dossier de l'OS (identité, PC EW, dernière IP), journal tournant sans texte de diapo |
-| `service.py`, `ui.py`, `status_text.py` | la fenêtre Tkinter : le service (client + serveur web) tourne dans un thread, la fenêtre lit un instantané toutes les 250 ms |
 | `client.py` | boucle asynchrone : appairage, reconnexion, délai de grâce de 2 s, heartbeats, keepalive |
 | `web.py` + `public/` | serveur `aiohttp` (page + WebSocket) ; page sans CDN, texte brut, taille de police ajustée à la zone |
+| `service.py`, `ui.py`, `status_text.py` | la fenêtre Tkinter : le service tourne dans un thread, la fenêtre lit un instantané toutes les 250 ms |
 
-## Documentation (branche `claude/analyse_repo`)
+## Documentation
 
 | Document | Contenu |
 |---|---|
-| [spec/metier.md](spec/metier.md) | Besoin, cas d'usage, règles métier, critères de réussite |
-| [spec/user_feedback.md](spec/user_feedback.md) | Retours utilisateur et actions |
-| [spec/technique.md](spec/technique.md) | Inventaire de l'existant, dette, architecture cible |
-| [spec/interfaces.md](spec/interfaces.md) | Interfaces EW, navigateur, opérateur, configuration |
-| [STRATEGIES.md](STRATEGIES.md) | Options étudiées et recommandation |
-| [doc/branches.md](doc/branches.md) | Analyse de chaque branche |
+| [doc/notice_installation.md](doc/notice_installation.md) | **Installer** l'application et le démarrage automatique |
+| [doc/notice_utilisation.md](doc/notice_utilisation.md) | **Utiliser** l'application, régler OBS, dépanner |
+| [doc/recette.md](doc/recette.md) | Tests à valider avec le vrai matériel, hypothèses, rapport |
 | [doc/protocole_easyworship.md](doc/protocole_easyworship.md) | Protocole de télécommande EW tel que le code l'utilise |
-| [doc/build_et_installation.md](doc/build_et_installation.md) | Build, installeur, CI/CD |
 | [doc/capture_trames.md](doc/capture_trames.md) | Capturer les trames EW avec `tools/ew_capture.py` |
-| [doc/plan_de_migration.md](doc/plan_de_migration.md) | Étapes de réalisation |
+| [doc/build_et_installation.md](doc/build_et_installation.md) | Exécutable, installeur, publication (préparés, non validés) |
+| [spec/metier.md](spec/metier.md), [spec/user_feedback.md](spec/user_feedback.md) | Besoin, cas d'usage, retours utilisateur |
+| [spec/technique.md](spec/technique.md), [spec/interfaces.md](spec/interfaces.md) | Architecture, règles, interfaces et paramètres |
+| [STRATEGIES.md](STRATEGIES.md), [doc/plan_de_migration.md](doc/plan_de_migration.md), [doc/branches.md](doc/branches.md) | Historique : options étudiées, plan de réalisation, ancien code |
 
 ## Compatibilités
 
 | Version d'EasyWorship | Compatible |
 |:--:|:--:|
-| **EasyWorship 7.4.1.9** (build 7.4.1.9) | Testé le 2026-10-23 (EW sous Windows, client Mac) : connexion, appairage, lecture des diapos |
+| **EasyWorship 7.4.1.9** (build 7.4.1.9) | Testé en réel (EW sous Windows) : connexion, appairage, lecture des diapos, reconnexion, démarrage automatique |
 
 | Version d'OBS | Compatible |
 |:--:|:--:|
-| inconnue | « J'espère, je l'utilise » (à renseigner) |
+| utilisé en production par le mainteneur (version exacte à renseigner) | Source navigateur : affichage et latence vérifiés |
 
-## Retrouver le code existant
+## Retrouver l'ancien code
 
-Le code n'est pas sur `main` :
+L'ancien code reste dans l'historique du dépôt :
 
 * `version1` (= `dev`) : application Tkinter EW → fichier texte.
 * `version2` : widgets/flux + sortie web (Python ≥ 3.12, PyInstaller).
