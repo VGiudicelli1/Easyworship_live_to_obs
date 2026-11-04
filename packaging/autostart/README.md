@@ -6,7 +6,7 @@ démarrer), puis lancement au démarrage de la machine par : `python -m ew_to_ob
 
 **Fichiers jamais essayés en réel** (recette R-108 à R-111) : adapter les chemins.
 
-* **Windows** (PC d'EW) : `ew_to_obs_tache.cmd`, en administrateur, depuis le dépôt : crée la tâche planifiée
+* **Windows** (PC d'EW) : `ew_to_obs_tache.cmd`, en administrateur, depuis le dépôt  (venv `.venv` ou `venv` détecté, ou son nom en argument) : crée la tâche planifiée
   « au démarrage du PC ». Les erreurs vont dans `%APPDATA%\ew_to_obs\ew_logs.log`.
 * **macOS** : `ew_to_obs.launchd.plist` (exécutable PyInstaller ; pour les sources, remplacer le programme par
   `…/.venv/bin/python -m ew_to_obs --headless --serve`) → `~/Library/LaunchAgents/io.github.ew-to-obs.plist`,
