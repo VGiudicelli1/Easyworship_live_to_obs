@@ -209,7 +209,8 @@ def test_ci_mode_runs_as_a_service_and_logs_on_stderr(tmp_path):
             *["--loglevel", "2", "--config-dir", str(tmp_path / "cfg")],
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
-            env={**os.environ, "PYTHONPATH": str(SRC)},  # fonctionne aussi sans « pip install -e »
+            # fonctionne aussi sans « pip install -e » ; stderr en UTF-8 (sous Windows : cp1252)
+            env={**os.environ, "PYTHONPATH": str(SRC), "PYTHONIOENCODING": "utf-8"},
         )
         try:
             page = b""
@@ -228,7 +229,7 @@ def test_ci_mode_runs_as_a_service_and_logs_on_stderr(tmp_path):
             process.terminate()
             out, err = await asyncio.wait_for(process.communicate(), 10)
             await ew.stop()
-        return page, out.decode(), err.decode()
+        return page, out.decode("utf-8", "replace"), err.decode("utf-8", "replace")
 
     page, out, err = asyncio.run(asyncio.wait_for(scenario(), 40))
     assert b"<html" in page.lower()
