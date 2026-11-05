@@ -1,0 +1,255 @@
+# Protocole de la télécommande EasyWorship (tel qu'utilisé par le code)
+
+> Source : rétro-ingénierie par ew2vm (Michael Norton), reprise dans `src/ew_api.py` de la branche `dev`. **Non documenté par EasyWorship**. Aucune garantie. Ce document décrit ce que fait le code, pas une spécification officielle. À compléter avec des captures de trames réelles.
+
+## 1. Connexion
+
+1. **Résolution du port** (EW ≥ 7.2.3) : requête DNS (mDNS) `PTR _ezwremote._tcp.local.` envoyée **en unicast UDP** à `<hôte EW>:5353`. On lit la cible du PTR, puis dans la section *additionnelle* l'enregistrement `SRV` correspondant → **port TCP**.
+2. `socket.create_connection((hôte, port), timeout=7)`.
+3. Premier message (client → EW) :
+   ```json
+   {"device_type":0,"action":"connect","uid":"<client_id>","device_name":"ew to obs"}
+   ```
+   `uid` est un identifiant client libre (UUID) ; le code actuel utilise une valeur fixe partagée.
+
+## 2. Format des trames
+
+```
+<JSON UTF-8>\r\n[<size octets binaires>]
+```
+Les octets binaires n'existent que si `action ∈ {LiveData, ScheduleData, currentImage, slideImage}`, leur longueur est `size` dans le JSON. Le récepteur doit accumuler les octets jusqu'à avoir tout le message (JSON + `\r\n` + `size`) avant de traiter.
+
+## 3. Messages
+
+### Client → EW
+| action | Champs | Rôle |
+|---|---|---|
+| `connect` | `device_type`, `uid`, `device_name` | Identification |
+| `heartbeat` | `requestrev` | Envoyé si rien n'a été émis depuis 3 s |
+| `GetLiveData` | `requestrev` | Demande la liste des diapos de la présentation live |
+| `getSlideInfo` | `slide_rowid`, `revision`, `requestrev`, `rectype:1`, `pres_rowid` | Demande titre + contenu d'une diapo. `slide_rowid:0` = titre de la présentation |
+
+### EW → client
+| action | Champs utiles | Rôle |
+|---|---|---|
+| `status` | `requestrev`, `liverev`, `imagehash`, `slide_rowid`, `logo`, `black`, `clear` | Notification d'état : changement de présentation (`liverev`), de diapo (`imagehash` + `slide_rowid`), contenu masqué (`logo`/`black`/`clear`) |
+| `LiveData` | `size` + binaire | Binaire : en-tête `<lqqqlq` (40 octets : ?, `liverev`, `pres_rowid`, `title_revision`, `nb_diapos`, ?), puis `nb_diapos` × `<qq` (`rowid`, `revision`) |
+| `slideInfo` | `slide_rowid`, `title`, `content` | Réponse à `getSlideInfo` |
+| `ScheduleData`, `currentImage`, `slideImage` | `size` + binaire | Ignorés par l'application (non utilisés) |
+
+## 4. Algorithme (machine à états de `procmsg`)
+
+À chaque message reçu :
+
+1. Mémoriser `requestrev` s'il est présent (il doit être renvoyé dans les requêtes ; sert à invalider les réponses périmées).
+2. Si `status` : stocker `liverev_pending`, `imagehash_pending`, `slide_rowid_pending` ; `contentvisible_pending = not (logo or black or clear)`.
+3. Si `LiveData` : vider les diapos, mémoriser `liverev` et `pres_rowid`, créer les diapos (rowid, revision), demander le titre (`slide_rowid:0`).
+4. Si `slideInfo` : stocker `content`/`title` dans la diapo ; (code existant seulement) si le titre correspond à la liste « crédits » → le contenu devient le *crédit* de la présentation et la diapo reste vide. Cette règle est retirée de la cible.
+5. Si le contenu doit être visible et que `imagehash_pending ≠ imagehash` :
+   * si `liverev_pending ≠ liverev` → vider la file d'envoi, `GetLiveData` ;
+   * sinon demander `getSlideInfo` pour toute diapo non encore demandée ; quand toutes ont répondu et que la diapo courante (`slide_rowid_pending`) existe avec un contenu → **événement `current_slide_changed`**, `imagehash ← imagehash_pending`.
+6. Si l'`imagehash` est à jour et que le contenu n'était pas visible → événement `content_visible`.
+7. Si le contenu ne doit plus être visible alors qu'il l'était → événement `content_unvisible`.
+
+## 5. Points d'attention / inconnues
+
+* Le champ `imagehash` identifie l'image affichée ; il change à chaque diapo, **même si le texte est identique**.
+* Une diapo sans texte (image, fond) a `content` vide → la logique actuelle n'émet alors **pas** `current_slide_changed` (le texte précédent reste affiché). Comportement probablement à corriger : afficher un texte vide.
+* Le contenu est du texte brut ; le formatage (gras, retours à la ligne) n'a pas été étudié.
+* La table des octets inconnus (`unknownrawdata0`, `unknownrawdata5`) n'est pas comprise.
+* Plusieurs télécommandes peuvent-elles se connecter en même temps avec le même `uid` ? Inconnu ; d'où l'intérêt d'un UUID par installation.
+* Version d'EW testée : **EW 7** (de mémoire du mainteneur, version exacte à confirmer ; la découverte de port dynamique suppose ≥ 7.2.3).
+* **Prérequis EW : Bonjour installé** sur le PC EasyWorship, sinon la télécommande n'est pas activable (et le service mDNS `_ezwremote._tcp` n'est pas annoncé).
+* Captures de trames réelles : **pas encore disponibles** (pas d'accès à EW pour le moment). Les tests initiaux devront utiliser des trames reconstruites depuis le code / ew2vm, à valider ensuite.
+
+## 6. Pistes de tests sans EW
+
+* Écrire un **simulateur** (serveur TCP + annonce mDNS) qui rejoue des trames capturées (`tests/fixtures/*.jsonl`).
+* Capturer les trames réelles avec le logger `LoggerPrint` (déjà présent, affiche `SEND`/`RECV`) pendant un culte-test.
+
+
+## 7. Constats sur capture réelle (2026-10-23)
+
+Source : `tests/fixtures/ew_session_reelle_anonymisee.jsonl` (60 s, EW 7 sous Windows, client Mac, titres et textes remplacés par des textes factices de même structure). Ce qui suit **corrige ou complète** les sections 1 à 6, rédigées d'après le code seul.
+
+### Confirmé
+* Découverte du port par requête mDNS unicast, puis TCP : fonctionne. Le port est **dynamique** (57395 dans la capture). Le nom `<nom-du-pc>.local` se résout depuis le Mac.
+* Trame = ligne JSON + `\r\n`, binaire de `size` octets après `LiveData` ; format du binaire `<lqqqlq` + `n × <qq` exact (72 octets pour 2 diapos = 40 + 2×16, 152 pour 7).
+* EW répond **10 ms** après `connect` avec un `status`. Les heartbeats toutes les 3 s suffisent : EW n'y répond pas, la connexion tient.
+* Dès qu'un `status` annonce un `liverev` inconnu, `GetLiveData` → `LiveData` en 3–10 ms, puis `getSlideInfo` en rafale ; les `slideInfo` reviennent **dans le désordre** (≈ 50 ms pour le titre, ≈ 150 ms pour les diapos). Délai total changement de présentation → texte connu : **≈ 0,1–0,3 s**.
+* Au sein d'une présentation, aucune nouvelle requête : seul `status` circule (le contenu est déjà en cache). Si la même présentation est ré-affichée, `liverev` change et tout est redemandé.
+* `logo`, `black`, `clear` sont présents dans **chaque** `status`, indépendants (combinaisons vues : `black+clear`, `logo+clear`). Visible = aucun des trois.
+* Les retours à la ligne du texte sont `\r\n`, le texte contient apostrophes typographiques, accents et doubles espaces : normaliser en `\n` côté sortie, ne pas « nettoyer ».
+
+### Nouveau / différent de ce qu'on croyait
+1. **Messages `paired` / `notPaired`** (`{"action":"paired","requestrev":"0"}`) : première réponse à `connect`. `paired` = télécommande connue ; `notPaired` = inconnue, voir §8 (appairage validé en pratique le 2026-10-23).
+2. **Types** : dans `status` et `slideInfo`, `pres_rowid`, `slide_rowid`, `pres_no`, `slide_no`, `schedulerev`, `liverev`, `revision`, `requestrev`, `label_*` sont des **chaînes** ; `logo/black/clear` sont des booléens JSON ; `rectype` et `permissions` des entiers. Les clés du binaire `LiveData` sont des entiers : **comparer en normalisant le type** (le script d'analyse avait ce bug).
+3. **Un changement de diapo produit souvent deux `status`**, à 5–150 ms d'écart : le premier porte le nouveau `slide_rowid` avec l'**ancien** `imagehash`, le second met à jour l'`imagehash` (9 changements sur 23). Se baser sur `imagehash` (logique V1) retarde donc l'affichage, et ne distingue pas deux diapos d'image identique. **Clé recommandée : `(pres_rowid, slide_rowid)` + `logo/black/clear`**, avec un anti-rebond de ~100 ms.
+4. `rectype` vaut 0 sur le `status` qui suit un changement de présentation (et à la connexion), 1 ensuite ; un `status` « 0 » est parfois suivi immédiatement du même en « 1 » (clear). *Hypothèse **infirmée** par le §10* : `rectype` 0 apparaît aussi sans changement de présentation ; ne pas s'en servir.
+5. Champs `slideInfo` complets : `rectype`, `pres_rowid`, `slide_rowid`, `title`, `reference_num`, `content`, `notes`, `revision`, `label_bkcolor`, `label_txcolor`. Pour `slide_rowid = "0"` : `title` = nom de la présentation, `content` vide.
+6. Pour une diapo, `title` est **vide ou une étiquette de section** (`Verse 1`…). Les diapos « crédits » de ew2vm ne sont pas rencontrées : règle sans objet ici (confirme son retrait).
+7. Champs du header `LiveData` : `unknown0` vaut toujours 1 ; `unknown5` varie, proche de `liverev` (probablement une révision) ; `title_revision` et `revision` ressemblent à des horodatages/compteurs 64 bits. Non utiles pour l'application.
+8. Valeurs constantes dans la session : `pres_no=slide_no="0"`, `permissions=0`, `schedulerev` fixe, `requestrev="0"` : le mécanisme `requestrev` semble inutilisé par cette version d'EW.
+
+### Non couvert par la capture (à refaire)
+Diapo **sans texte** (image/fond), présentation vide, coupure réseau et reconnexion, redémarrage d'EW, édition d'une diapo en direct (`revision` qui change sans `liverev`), diapos très longues, nouvel `uid`, version exacte d'EW.
+
+## 8. Appairage (2e capture réelle, `uid` neuf, EW 7.4.1.9)
+
+Source : `tests/fixtures/ew_session_appairage_anonymisee.jsonl` (58 s, 346 trames, EW 7 version 7.4.1.9, client Mac).
+
+| t (s) | Événement |
+|---|---|
+| 0,006 | Client → `connect` avec un `uid` jamais vu et `device_name = "ew to obs"` |
+| 0,018 | EW → **`{"action":"notPaired","requestrev":"0"}`** (aucun `status`, aucune donnée) |
+| 3, 6 | Client → `heartbeat` : la connexion reste ouverte, EW ne répond rien |
+| **8,694** | EW → **`paired`** puis, **dans la même milliseconde**, le premier `status` : l'utilisateur vient d'**accepter la télécommande sur le PC EasyWorship** |
+| 8,695 → 8,76 | Séquence habituelle : `GetLiveData` → `LiveData` → `getSlideInfo` × n → `slideInfo` |
+
+Conséquences :
+* Un `uid` inconnu **n'est pas refusé** : EW laisse la connexion ouverte et attend la décision de l'opérateur. Le client doit **rester connecté et continuer les heartbeats** (≥ 1 toutes les 3 s) pendant l'attente, et afficher « En attente d'acceptation sur le PC EasyWorship ».
+* Un `uid` déjà accepté reçoit `paired` immédiatement (capture du §7 avec l'`uid` de la V1). **Confirmé par le mainteneur** : un appareil enregistré dans EW le reste durablement (jusqu'à révocation, voir §9).
+* Délai d'attente maximal d'EW avant refus/abandon : **inconnu** (non testé au-delà de 9 s). Cas « refusé » par l'opérateur : non testé, message attendu inconnu.
+* `device_name` est probablement le libellé montré à l'opérateur dans la demande : choisir un nom explicite (« ew2obs (NOM_DE_LA_MACHINE) »).
+* Le port TCP de la télécommande valait **57395 dans les deux captures** (même EW, sessions différentes) : il n'est peut-être pas aussi dynamique qu'annoncé, mais ne pas s'y fier ; garder la découverte mDNS.
+* Cette capture ajoute 27 changements de présentation (111 `slideInfo`) sans écart avec le §7 : mêmes champs, mêmes types, `slideInfo` dans le désordre, aucune diapo vide, aucune diapo modifiée ; `logo`/`black`/`clear` toujours faux.
+
+## 9. Mode contrôle, révocation (3e capture, EW 7.4.1.9)
+
+Source : `tests/fixtures/ew_session_controle_revocation_anonymisee.jsonl` (24 s). Déroulé annoncé par le mainteneur : connexion d'un `uid` neuf, appairage validé sur EW, **mode contrôle activé**, **mode contrôle désactivé**, **appairage révoqué**.
+
+| t (s) | Événement observé | Interprétation |
+|---|---|---|
+| 0,009 | `notPaired` | `uid` neuf (comme §8) |
+| 8,894 | `paired` + `status` + `LiveData` + 8 `slideInfo` | appairage validé sur le PC EW |
+| 15,207 | `status` **identique** (même diapo, même `imagehash`, mêmes drapeaux) sauf **`permissions: 1`** | mode contrôle activé |
+| 20,995 | `status` identique sauf **`permissions: 0`** | mode contrôle désactivé |
+| 23,947 | **fermeture de la connexion TCP par EW, sans aucun message** (EOF, ~2,7 s après le dernier heartbeat) | appairage révoqué |
+
+Conséquences pour l'application :
+* Le champ `permissions` traduit l'état du *mode contrôle* de cette télécommande dans EW (0 / 1). L'application est en lecture seule : **elle l'ignore**. Données et mises à jour de diapos arrivent normalement avec `permissions = 0`.
+* Ce `status` « parasite » ne change ni la diapo ni les drapeaux : la détection par clé `(pres_rowid, slide_rowid, logo, black, clear)` (§7) ne doit **pas** réémettre de mise à jour, ni redemander les données, quand seul `permissions` change.
+* **Révocation = fermeture TCP silencieuse**, indiscernable à ce niveau d'une coupure réseau ou d'un redémarrage d'EW. Le client doit donc se reconnecter automatiquement (attente progressive, 1 s → 10 s) ; après une révocation il recevra vraisemblablement `notPaired` (**non capturé** : le script s'arrêtait à la fermeture ; utiliser `--reconnect`) et passera en état « en attente d'acceptation ». Message à l'opérateur proposé : « Connexion fermée par EasyWorship (appairage révoqué ou EW fermé) ».
+* Le refus d'une demande d'appairage **n'existe pas** : EW propose seulement d'accepter ou de laisser en attente (information du mainteneur). Il n'y a donc pas de message de refus à gérer ; en revanche l'**attente peut être indéfinie** : pas de délai d'expiration côté application, heartbeats maintenus. Combien de temps EW garde la connexion `notPaired` ouverte sans réponse : **non testé**.
+* Texte vide : le mainteneur pense qu'**une diapo vide n'existe pas** dans EW ; une diapo **sans texte** (images seules, etc.) est possible mais **pas encore capturée** — à confirmer ce que renvoie `slideInfo.content` (chaîne vide attendue).
+
+## 10. Diapos vides, étiquettes, édition en direct (4e et 5e captures, EW 7.4.1.9)
+
+Sources : `tests/fixtures/ew_session_diapos_vides_anonymisee.jsonl` (40 s) et `tests/fixtures/ew_session_edition_live_anonymisee.jsonl` (40 s). Présentations de test créées par le mainteneur (la présentation « 443 » est conservée telle quelle dans les fixtures car ses textes décrivent les cas testés ; les autres sont anonymisées).
+
+### Port
+Le port TCP de la télécommande valait **63612** dans ces deux captures contre 57395 plus tôt. Ce n'est pas un réglage : EW l'attribue lui-même (dynamique depuis EW 7.2.3, comme le note le commentaire de `ew_api.py`) et l'application le **découvre par mDNS à chaque connexion**. Le « port » de l'interface V1 (5353) est le port **mDNS** de la requête, pas celui de la télécommande ; la V1 n'a jamais demandé à l'utilisateur de saisir le port TCP, et le nôtre non plus. On ne sait pas quand exactement EW change de port ; voir §11.
+
+### Diapos vides ou sans texte
+* **Elles existent** : `slideInfo.content = ""`, `title = ""`, tous les autres champs normaux, et un `status` habituel à l'affichage. Une présentation de 5 diapos vides a été capturée ; la présentation « 443 » contient aussi une diapo vide au milieu.
+* **Toutes les diapos vides partagent la même image** donc le même `imagehash`. Dans la capture « diapos vides » : 11 changements de diapo avec `imagehash` inchangé, dont **10 jamais suivis d'un autre `status`** (dans la 5e capture : 3 changements, tous suivis d'un 2e `status` avec nouvel `imagehash`).
+  → **EW signale pourtant chaque changement** : à chaque clic un `status` arrive avec le nouveau `slide_rowid` (8846 → 8884 → 8885 → 8886 → 8887…, voir la fixture) ; c'est seulement l'`imagehash` qui reste identique parce que les images sont identiques. La télécommande n'est donc pas en défaut : la logique V1 (déclenchement quand `imagehash` change) **n'aurait jamais vu ces 10 changements**, le texte précédent serait resté affiché. La V1 testait en plus `if currentSlide.content:` (diapo vide ignorée). Confirmation expérimentale de la règle du §7 : l'état se recalcule à **chaque** `status`.
+* Comportement attendu côté sortie : diapo vide ⇒ `text = ""` (affichage masqué), pas de maintien du texte précédent.
+
+### Étiquettes (`title` des diapos)
+* `title` d'une diapo = **nom de l'étiquette** (« Label 1 », « Verse 2 »…), vide si la diapo n'en a pas ; `label_bkcolor` / `label_txcolor` valent alors `12014644` / `12040119` pour une diapo étiquetée et `536870911` / `1250067` sinon (`536870911 = 0x1FFFFFFF`, « aucune couleur »).
+* L'appartenance à un groupe n'est **pas** encodée : une diapo sans étiquette fait partie du groupe de la diapo étiquetée qui la précède (d'après le mainteneur), à déduire de l'ordre de `LiveData`. Deux étiquettes de même nom non adjacentes forment deux groupes distincts. Une diapo vide n'appartient à aucun groupe. **Inutile pour l'application** (texte seul) ; documenté pour mémoire.
+* L'ordre des `slides` dans `LiveData` est l'ordre de la présentation (la nouvelle diapo ajoutée en direct apparaît en 4e position).
+* Le titre de la présentation (`slide_rowid = "0"`) ne peut pas être vide (EW refuse : « diapo sans titre impossible », intitulé de la présentation de test).
+
+### Édition en direct (capture « édition en direct »)
+| t (s) | Événement | Détail |
+|---|---|---|
+| 10,5 | `status` sans changement de diapo ni d'`imagehash` | seul **`schedulerev`** change (modification du planning) |
+| 15,6 | `status` `rectype 0` avec **nouveau `liverev`** (puis, 5 ms plus tard, un 2e `status` avec nouvel `imagehash`) | `GetLiveData` → `LiveData` de **8 diapos** (7 avant) : la diapo ajoutée (`8894`, « contenu 3 : slide ajouté en live ») est insérée à la 4e place ; les `revision` de 2 diapos modifiées ont changé, les autres non |
+| 36,9 | `status` : seul `schedulerev` change | pas de changement de `liverev` : rien à recharger |
+
+* **Un changement de contenu en direct se signale par un nouveau `liverev`** (≈ 5 s après la modification dans cette capture), pas par un événement par diapo. Il faut alors tout redemander (`GetLiveData` + `getSlideInfo`), comme pour un changement de présentation. Optimisation possible, non nécessaire : ne redemander que les diapos dont la `revision` du `LiveData` a changé (2 sur 8 ici).
+* Après rechargement la diapo en direct garde le **même** `(pres_rowid, slide_rowid)` mais son texte peut avoir changé : la sortie doit être **recalculée et diffusée si le texte a changé**. Dédoublonner sur l'état de sortie `(visible, texte)` et non sur la clé de diapo.
+* `schedulerev` (planning EW) change sans effet sur le direct : **à ignorer**, comme `permissions`. Un `status` reçu deux fois de suite avec la même diapo (cas du 10,5 s) ne doit rien déclencher.
+* Un `status` peut précéder la fin du rechargement : tant que les `slideInfo` de la diapo courante manquent, ne pas diffuser de texte périmé *ni* vide ; attendre (≈ 0,1–0,2 s) ou conserver l'ancien état jusqu'à réception.
+
+## 11. Coupures, fermeture d'EW, aucun live, sans appairage (6e à 9e captures, EW 7.4.1.9)
+
+Sources : `tests/fixtures/ew_session_coupure_wifi_anonymisee.jsonl`, `ew_session_fermeture_ew_anonymisee.jsonl`, `ew_session_aucun_live_et_chants_anonymisee.jsonl`, `ew_session_sans_appairage_anonymisee.jsonl`. Les trois premières ont été lancées **sans** `--reconnect` : le script s'arrête donc à la première fermeture (la reconnexion elle-même n'a pas été observée en réel).
+
+### Coupure du Wi‑Fi du client (test 1)
+* À 10,8 s (dernier heartbeat à 9,1 s) la lecture renvoie **EOF** : le système du client ferme la connexion dès que l'interface réseau tombe. L'événement `closed_by_peer` du script est donc ici une fermeture **locale**, pas un message d'EW.
+* **Non observé** : une coupure *silencieuse* (câble ou Wi‑Fi coupé côté PC EW, le client gardant son interface) où aucun EOF n'arrive. Voir ci-dessous la contrainte de détection.
+
+### Fermeture d'EW (test 2)
+* À 8,876 s : un dernier `status` (même diapo, même `liverev`, seul `schedulerev` change : EW enregistre le planning en quittant) puis **EOF dans la même milliseconde**. Aucun message d'adieu.
+* **Le port change quand EW est relancé** : observé de façon certaine entre ce test (63612) et la session suivante (56326, EW fermé puis rouvert). Les valeurs 57395 (captures 1 à 3) et 63612 (captures 4 à 7) diffèrent aussi, très probablement pour la même raison (relance d'EW entre-temps, non consignée). Ce n'est **pas** un réglage de l'utilisateur ni de notre script : le port vient de la réponse mDNS d'EW, comme dans la V1. Conséquence : ne jamais le mémoriser, le **redécouvrir à chaque tentative**.
+
+### Aucune diapo en direct (test 3, début de session, EW venant d'être ouvert)
+* `status` avec **`pres_rowid = "0"`, `slide_rowid` négatif (`-100049`), `imagehash = ""`** ; `GetLiveData` → `LiveData` de **40 octets seulement** (en-tête, `pres_len = 0`, aucune diapo). Notre `getSlideInfo` du titre (`slide_rowid 0`, `pres_rowid 0`) **n'a jamais reçu de réponse** : ne pas attendre le titre.
+* ⇒ **Rien en direct** = `imagehash` vide, ou `slide_rowid` absent de la liste du dernier `LiveData`. Sortie : texte vide, `visible = false`.
+
+### Chants de la bibliothèque : `pres_rowid = "0"` et identifiants négatifs (test 3)
+* Un chant mis en direct arrive avec **`pres_rowid = "0"`** et des `slide_rowid` **négatifs** (`-100280` … `-100288`), 9 diapos ; le titre du chant est `slideInfo` de `slide_rowid "0"`. Un second chant : `-100378` … `-100386`. Ce ne sont **pas des identifiants stables** : ils sont attribués à la mise en direct.
+* ⇒ `pres_rowid = "0"` ne signifie pas « rien en direct » ; et `(pres_rowid, slide_rowid)` n'identifie une diapo **qu'avec le `liverev` courant**. À chaque nouveau `liverev`, vider le cache des diapos (comme la V1) et ne chercher le texte que dans le cache du `liverev` en cours.
+* Un refrain répété est constitué de **plusieurs diapos distinctes** (identifiants différents) de contenu identique, d'étiquette `Chorus` (`label_bkcolor 5518453`).
+* Les sections `Verse n` / `Chorus` sont dans `title` (voir §10). Textes multilignes avec `\r\n`, apostrophes droites `'` et typographiques `’`.
+
+### Heartbeat envoyé par EW (test 3)
+* Une fois, 2,2 s après `connect` : `{"action":"heartbeat","requestrev":"0"}` **d'EW vers le client** (jamais vu dans les 8 autres sessions). Les gérer sans rien faire. **EW est silencieux pendant des minutes** quand rien ne change : l'absence de message ne prouve pas une panne. Détecter une coupure silencieuse par un autre moyen (voir `spec/technique.md`).
+
+### Sans appairage (test 4)
+* L'`uid` de la V1, non appairé à ce moment-là, reçoit `notPaired` à 13 ms puis **rien**. La connexion reste ouverte **au moins 40 s** (13 heartbeats envoyés sans réponse ni fermeture). Pas de délai d'expiration observé ; limite supérieure inconnue. Conforme à ce qu'on attend d'un appairage révoqué (§9) : après révocation, la reconnexion donne `notPaired`.
+
+### Conséquences pour le client
+1. Reconnexion : `découverte du port → connexion → connect`, **à chaque tentative** ; ne jamais réutiliser un port d'une session précédente. Première nouvelle tentative **immédiate**, puis attente progressive (0,5 s → 10 s) pour que les micro-coupures se rétablissent en moins de 2 s (voir `spec/technique.md`).
+2. Un `notPaired` ne doit pas déclencher de nouvelle tentative : rester connecté et envoyer les heartbeats (§8).
+3. L'application ne lit que le texte des diapos : **ne pas demander le titre (`slide_rowid 0`)**, cela évite un aller-retour qui peut rester sans réponse. Demander toutes les diapos d'un coup (EW répond dans son propre ordre, §13) pour que la navigation soit instantanée.
+
+## 12. Reconnexion réelle et IPv6 (10e capture, `--reconnect`, 274 s)
+
+Source : `tests/fixtures/ew_session_reconnexion_anonymisee.jsonl`. Le fichier ne contient que les trames et les événements du script ; **l'ordre exact de vos manipulations (relance d'EW, révocation, coupure) n'y figure pas**, les interprétations ci-dessous se limitent à ce qui se lit dans les trames.
+
+| t (s) | Événement | Lecture |
+|---|---|---|
+| 0 → 10,8 | `connect` (port 49708) → `notPaired` ; `paired` à 10,8 s | appairage accepté sur EW ; EW n'a rien en direct (`imagehash` vide, `LiveData` de 40 octets) |
+| 17,67 | dernier `status` (seul `schedulerev` change) puis **EOF dans la même milliseconde** | même signature que la fermeture d'EW (§11) |
+| 45,3 | reconnexion automatique, **nouveau port 53964**, `paired` immédiat | l'appairage survit à la relance d'EW |
+| 68,7 | EOF (sans `status` préalable) | fermeture de la connexion |
+| 100,9 | une tentative de découverte échoue (« découverte impossible ») | EW injoignable ou ne répondant plus au mDNS à ce moment |
+| 139,6 | reconnexion automatique, **même port 53964**, `paired` immédiat | EW n'a donc pas été relancé entre-temps ; l'appairage de cet `uid` est toujours valide |
+| 140 → 274 | 45 heartbeats sans incident | |
+
+Constats :
+* **La reconnexion automatique fonctionne** (2 fois sur 2) : découverte du port, `connect`, `paired` en ~10 ms, `status` dans la même milliseconde, données en ~0,1 s.
+* **Pas d'IPv6 côté EW** (observé par le mainteneur : « en IPv6, ça ne marche jamais ; l'IPv4 marche du premier coup ») : une tentative de découverte qui échoue a pris **≈ 29 s** (68,7 s → 100,9 s, moins 3 s d'attente) car la découverte du script interrogeait les adresses **une par une**, 2 essais × 3 s chacune. Idem côté TCP avec `socket.create_connection` de la V1 (7 s par adresse injoignable, sans ordre IPv4/IPv6). Les durées de 27,6 s et 70,9 s entre fermeture et reconnexion contiennent aussi le temps où EW n'était pas disponible : elles ne mesurent pas le délai de reconnexion seul.
+* Correction faite dans `tools/ew_capture.py` : requête mDNS envoyée **en parallèle** à toutes les adresses (la première réponse gagne), **IPv4 d'abord**, connexion TCP à l'IP qui a répondu (sinon IPv4 d'abord) avec 3 s par adresse et 10 s au total. Les fichiers de capture enregistrent désormais `discovery_s`, `connect_s` et `address`, ainsi que les échecs (`discovery_failed`, `connect_failed`) avec leur durée.
+* Règle pour l'application : **IPv4 d'abord, IPv6 en dernier recours seulement** ; ne jamais enchaîner des délais par adresse ; viser une découverte + connexion < 1 s quand EW est là, et un échec franc en < 5 s quand il est absent (pour que la tentative suivante parte vite).
+
+## 13. Grosse présentation : 150 diapos (11e capture, EW 7.4.1.9)
+
+Source : `tests/fixtures/ew_session_150_diapos.jsonl` (présentation de test « lorem ipsum (150) », conservée telle quelle : texte factice).
+
+* `LiveData` = **2 440 octets** (= 40 + 150 × 16) reçus d'un bloc ; 150 `getSlideInfo` envoyés en rafale (≈ 0,5 ms au total) ; **les 151 réponses** (150 diapos + titre) sont arrivées en **0,18 s**, sans perte ni doublon.
+* **EW répond dans son propre ordre**, pas dans l'ordre des requêtes : la diapo courante est arrivée en 38e position (+52 ms). Demander la diapo courante en premier ne garantit donc pas qu'elle revienne en premier ; inutile d'optimiser, tout demander d'un coup suffit.
+* Contenu : jusqu'à **987 caractères** sur une seule ligne (sans `\r\n`) : le texte est retourné à la ligne par l'affichage. La page OBS doit rester lisible avec ce volume (taille de police calculée par dichotomie).
+* Navigation dans la présentation : un seul `status` par diapo, aucune requête supplémentaire ; mêmes combinaisons `logo`/`black`/`clear` que précédemment (17 changements de diapo, toutes les combinaisons testées).
+* **Limite non testée** : au-delà de ~1 000 diapos le `LiveData` dépasse 16 384 octets (taille de lecture) et peut arriver en plusieurs segments TCP. Le décodeur de trames doit de toute façon traiter les messages **incomplets** (accumulation jusqu'à `size` octets) ; à couvrir par un test unitaire avec un message découpé en morceaux arbitraires.
+
+## 14. Accès par IP, emojis, texte formaté, relance d'EW, médias (12e et 13e captures, EW 7.4.1.9)
+
+Sources : `tests/fixtures/ew_session_emojis_relance_anonymisee.jsonl` et `ew_session_medias_anonymisee.jsonl` (noms de médias anonymisés ; les textes de test des présentations de test sont conservés).
+
+### Accès par adresse IP
+* Avec l'adresse IPv4 à la place du nom : découverte du port en **0,02 s** et connexion TCP en **0,01 s** (0,46 s dans l'autre capture). Le mainteneur confirme que c'est « instantané », contrairement au nom DNS.
+* **Cause probable** (non mesurée directement, les captures antérieures n'enregistraient pas le temps de résolution) : la résolution du nom `.local` sur le Mac (requêtes A **et** AAAA : l'AAAA, sans réponse côté EW, attend un délai). Correction faite dans `tools/ew_capture.py` : le nom n'est résolu qu'en **IPv4** (aucune requête AAAA, IPv6 seulement si le nom n'a aucune IPv4), une seule fois par tentative, et le temps est enregistré (`resolve_s`). À vérifier en relançant la capture avec le nom.
+* Conséquence de conception (`spec/technique.md`) : la configuration garde le **nom** et la **dernière IPv4 connue** ; la connexion tente d'abord l'IP mémorisée (instantané) pendant que le nom est re-résolu pour détecter un changement d'IP DHCP.
+
+### Emojis et texte formaté
+* Les emojis (plans supplémentaires, séquences à jonction `ZWJ` comme 🙂‍↔️ et ❤️‍🔥, sélecteurs de variation comme ☺️) arrivent en UTF-8 intacts.
+* La ligne d'emojis se termine par un **`U+FFFD`** (caractère de remplacement) après 👉 : il est **envoyé par EW lui-même** (octets `EF BF BD` ; le décodage du script est strict, un octet invalide aurait été signalé). Le texte source contenait probablement un caractère incomplet. L'application relaie le texte tel quel ; par précaution, **décoder l'UTF-8 avec remplacement** plutôt que rejeter un message entier si EW envoyait un jour des octets invalides.
+* **La mise en forme (gras, italique, souligné, ombré, contouré) n'est pas transmise** : `content` est du texte brut, sans balise ni champ de style ; les espaces doubles sont conservés. Les `label_*color` concernent l'étiquette, pas le texte.
+* La page web devra s'appuyer sur les polices emoji du système (OBS/navigateur embarqué).
+
+### Relance d'EW (capture « emojis », t = 20,7 s)
+* Même signature que la fermeture d'EW (§11) : dernier `status` (seul `schedulerev` change) puis EOF. Une première tentative de découverte échoue (6 s : 2 essais de 3 s, EW pas encore prêt), la connexion revient à 35,9 s (≈ 15 s après la fermeture), sur un **nouveau port** (61322), `paired` immédiat.
+* **État transitoire au démarrage d'EW** : premier `status` avec `pres_rowid "0"`, `slide_rowid "0"`, `liverev "0"`, `schedulerev "0"`, `imagehash ""` (EW pas initialisé), puis 7 ms plus tard un second `status` avec `slide_rowid -100049` et un vrai `liverev`. Deux `GetLiveData` (un par `status`) donnent deux `LiveData` identiques. Rien en direct dans les deux cas (`imagehash` vide) : texte vide ; un `liverev "0"` n'est pas un contenu.
+* Heartbeat d'EW : 3ᵉ observation, **≈ 2,3 s après `paired`**, toujours lorsque rien n'était en direct à la connexion et jamais lorsqu'une diapo l'était déjà (hypothèse, sans conséquence : ignorer ces heartbeats).
+
+### Médias (capture « médias »)
+* Les quatre diapos de test (vidéo en diapo entière, vidéo intégrée dans une diapo, image en diapo entière, image intégrée dans une diapo) **ne contenaient que le média** : leur `content` est vide. Ce n'est pas une règle sur les médias : le `content` reflète uniquement le **texte** de la diapo.
+* **Une diapo peut mêler média et texte** (information du mainteneur) : par exemple la diapo d'accueil « Bienvenue », qui contient un compte à rebours de 5 minutes sous forme de vidéo. Son texte est bien transmis dans `content` (voir la diapo d'accueil des captures du §7, texte sur deux lignes) ; la vidéo n'apparaît dans aucun champ.
+* Une diapo-média entière porte le **nom du média dans `title`** (étiquette colorée, `label_bkcolor 12014644`) ; intégrée dans une diapo, `title` reste vide.
+* Aucun message propre à la lecture vidéo (début, fin, position, compte à rebours) n'a été observé : seulement un `status` par diapo, avec un `imagehash` distinct par média. **Le compte à rebours n'est donc pas transmis** : seul le texte statique l'est.
+* ⇒ Le texte de sortie est **toujours `content`**, que la diapo contienne un média ou non (vide si la diapo n'a pas de texte). Ne pas afficher le nom du média (`title`).

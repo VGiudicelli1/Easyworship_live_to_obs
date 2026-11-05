@@ -1,0 +1,32 @@
+# Plan de migration vers l'application unique (historique)
+
+> **État : réalisé.** Les étapes 0 à 5, 7bis et 9 sont faites ; l'étape 6/7 (exécutable, installeur) est écrite mais non validée en réel ; l'étape 8 (essai en culte) est en cours ; l'étape 10 est faite par la pull request vers `main`. Ce document est conservé comme historique.
+
+Chaque étape est livrable séparément et se termine par une application qui fonctionne.
+
+| # | Étape | Résultat vérifiable | Source réutilisée |
+|---|---|---|---|
+| 0 | ✅ Branche d'intégration depuis `main`; importer `dev` (EW) et la page `public/` de `version2`. Nettoyer le `.gitignore` | Arborescence cible, CI verte (lint + tests vides) | `dev`, `version2` |
+| 1 | ✅ *fait sur `claude/ew_client`* — `ew_client` asynchrone + `LiveState`; corriger `Slide.isNull`, diapo vide, reconnexion | Tests `pytest` sur trames rejouées ; CLI `--headless` qui imprime les changements de diapo | `ew_api.py`, `storage.py` |
+| 2 | ✅ *fait sur `claude/ew_client`* — `web_server` aiohttp : HTTP statique + WebSocket + état courant à la connexion ; page sans CDN | Test automatique : un client WS reçoit l'état ; page vue dans OBS | `output_web.py`, `public/` |
+| 3 | ✅ *fait sur `claude/ew_client`* — `config` (JSON) + `client_id` généré + hôte mémorisé | Redémarrage = même hôte, aucune saisie | nouveau |
+| 4 | ✅ `discovery` : résolution du nom à chaque connexion + recherche mDNS | Changement d'IP DHCP sans intervention (test sur site) | nouveau |
+| 5 | ✅ *fait sur `claude/ew_client`* — `ui` Tkinter minimale (voir `spec/interfaces.md`) | Opérateur non technique réussit sans aide | `interface.py` v1 |
+| 6 | ⚠️ *écrit, non validé en réel* — Packaging Windows (PyInstaller + Inno Setup, variante PC d'EW) et release par tag | Installeur téléchargeable, installation sur PC vierge | `Makefile`, CI |
+| 7 | ⚠️ *écrit, non validé en réel* — Packaging macOS (cible actuelle) et Linux (archive) | `.dmg` / archive | `Makefile` |
+| 7bis | ✅ *Windows validé* — Démarrage automatique par OS (option) | Redémarrage session = app lancée | nouveau |
+| 8 | Essai réel pendant un culte, correction | Critères de réussite de `spec/metier.md` | — |
+| 9 | ✅ *notices écrites* — Documentation utilisateur (captures), README, versions EW/OBS testées | README à jour | — |
+| 10 | ✅ *PR vers `main`* — Ménage de dépôt : fusion dans `main`, tags `v1.0.0` / `v2.0.0-abandonné`, suppression de `link_flows`, `dev`/`version1` | Branches propres | — |
+
+## Ordre recommandé et justification
+1 → 2 → 3 donne tout de suite la valeur principale (EW → OBS sans fichier intermédiaire), testable en `--headless`, avant tout travail d'interface. Le packaging (6) est mis tôt car c'est le point faible historique ; on le fait tourner dès qu'il y a un exécutable minimal.
+
+## Questions ouvertes (bloquantes pour certaines étapes)
+**Réponses du mainteneur (2e échange)** : multiplateforme Mac/Windows/Linux (usage Mac, Windows envisagé en démarrage auto sur le PC d'EW) ; OBS sur Mac, EW sur Windows, applications sur le Mac ; EW 7 ; export fichier / crédits / filtre probablement abandonnés ; capture de trames à faire dès l'accès à EW. Prérequis : Bonjour sur le PC EW.
+
+Restent ouvertes :
+1. ~~Capture de trames réelles~~ : **9 captures faites le 2026-10-23** (voir `doc/protocole_easyworship.md` §7 à §11, fixtures `tests/fixtures/`) : diapos, appairage, mode contrôle, révocation, diapos vides, étiquettes, édition en direct, coupure Wi‑Fi, fermeture d'EW, aucun live, chants, sans appairage. La **reconnexion automatique** a été observée en réel (§12, 2 fois sur 2) ; l'appairage survit à la relance d'EW. Une présentation de **150 diapos** se charge en 0,2 s (§13). Test des micro-coupures réseau **abandonné** (décision du mainteneur). Emojis, texte formaté, relance d'EW, accès par IP et médias vus en réel (§14). Restent à observer : une **coupure silencieuse** (débrancher le PC EW sans EOF côté client), une attente `notPaired` de plusieurs minutes, un plantage d'EW.
+2. ~~Version exacte d'EW 7~~ : **7.4.1.9**.
+3. Démarrage automatique : à la demande, étape 7bis (après la v1 de l'installeur).
+4. Rendu souhaité dans OBS (fond semi-transparent actuel, police, position) : personnalisable par paramètres d'URL ?

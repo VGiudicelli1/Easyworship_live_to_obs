@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Non validé en réel. Remplacer NOM par le compte Mac et adapter le chemin du dépôt.
+     Après « --saveconf », seul « --headless --serve » est nécessaire (config dans
+     ~/Library/Application Support/ew_to_obs). Avec l'exécutable PyInstaller, remplacer les quatre
+     premiers éléments par son chemin. launchd n'expand pas « ~ » : chemins absolus. -->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>io.github.ew-to-obs</string>
+  <key>WorkingDirectory</key><string>/Users/NOM/easyworship_live_to_obs</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/NOM/easyworship_live_to_obs/.venv/bin/python</string>
+    <string>-m</string><string>ew_to_obs</string>
+    <string>--headless</string><string>--serve</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>StandardErrorPath</key><string>/Users/NOM/Library/Logs/ew_to_obs.log</string>
+</dict>
+</plist>

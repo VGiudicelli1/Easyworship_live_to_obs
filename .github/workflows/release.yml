@@ -1,0 +1,75 @@
+name: Release
+
+# Déclenché seulement par un tag vX.Y.Z (ou à la main pour essayer le build sans publier) :
+# construit l'application sur les trois systèmes, la teste (fumée) et publie la Release.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Tkinter (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y python3-tk
+      - run: pip install -e ".[dev]" pyinstaller
+      - run: python -m pytest -q
+      - name: Version
+        shell: bash
+        run: |
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then v="${GITHUB_REF_NAME#v}"; else v="0.0.0-dev"; fi
+          echo "VERSION=$v" >> "$GITHUB_ENV"
+      - name: Build PyInstaller
+        run: pyinstaller packaging/ew_to_obs.spec --clean -y --distpath dist --workpath build/pyi
+      - name: Test de fumée
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "Windows" ]; then exe=dist/ew_to_obs/ew_to_obs.exe;
+          elif [ "$RUNNER_OS" = "macOS" ]; then exe="dist/Easyworship vers OBS.app/Contents/MacOS/ew_to_obs";
+          else exe=dist/ew_to_obs/ew_to_obs; fi
+          python packaging/smoke.py "$exe"
+      - name: Installeur Windows
+        if: runner.os == 'Windows'
+        run: |
+          choco install innosetup -y --no-progress
+          & "C:\Program Files (x86)\Inno Setup 6\iscc.exe" "/DAppVersion=$env:VERSION" packaging\windows\installer.iss
+      - name: Archive macOS
+        if: runner.os == 'macOS'
+        run: ditto -c -k --keepParent "dist/Easyworship vers OBS.app" "dist/ew_to_obs-$VERSION-macos.zip"
+      - name: Archive Linux
+        if: runner.os == 'Linux'
+        run: tar -czf "dist/ew_to_obs-$VERSION-linux.tar.gz" -C dist ew_to_obs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ew_to_obs-${{ runner.os }}
+          path: |
+            dist/ew_to_obs-setup-*.exe
+            dist/ew_to_obs-*-macos.zip
+            dist/ew_to_obs-*-linux.tar.gz
+
+  publish:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: assets
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: assets/*
+          generate_release_notes: true

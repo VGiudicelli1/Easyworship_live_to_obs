@@ -1,0 +1,12 @@
+[Unit]
+Description=Easyworship vers OBS
+After=network-online.target
+
+[Service]
+WorkingDirectory=%h/Easyworship_live_to_obs
+ExecStart=%h/Easyworship_live_to_obs/.venv/bin/python -m ew_to_obs --headless --serve
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
