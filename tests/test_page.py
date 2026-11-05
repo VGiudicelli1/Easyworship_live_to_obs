@@ -28,8 +28,8 @@ class BackgroundServer:
     def _call(self, coro):
         return asyncio.run_coroutine_threadsafe(coro, self.loop).result(10)
 
-    def start(self, port=0):
-        self.server = WebServer(self.hub, "127.0.0.1", port)
+    def start(self, port=0, browser_grace=2.0):
+        self.server = WebServer(self.hub, "127.0.0.1", port, browser_grace)
         self._call(self.server.start())
         return self.server.port
 
@@ -280,6 +280,74 @@ def test_page_hides_when_the_application_stops_and_comes_back_when_it_restarts(b
     server.hub.publish(LiveState(True, "après le redémarrage"))
     server.start(port)
     shown(page, "après le redémarrage")  # le navigateur s'est reconnecté tout seul
+    page.close()
+
+
+def _watch_hidden(page):
+    """Enregistre chaque changement de l'attribut hidden de la zone de texte (clignotement)."""
+    page.evaluate(
+        """() => { const b = document.getElementById('text'); window.__hidden = [];
+                   new MutationObserver(() => window.__hidden.push(b.hidden))
+                     .observe(b, {attributes: true, attributeFilter: ['hidden']}); }"""
+    )
+
+
+def test_short_cut_to_the_application_does_not_blink(browser, server):
+    """Micro-coupure : le texte reste affiché pendant le délai de grâce et la page se reconnecte."""
+    page = open_page(browser, server, "?grace=3")
+    server.publish(LiveState(True, "texte"))
+    shown(page, "texte")
+    _watch_hidden(page)
+    port = server.port
+    server.stop()
+    page.wait_for_timeout(300)
+    assert not page.evaluate("document.getElementById('text').hidden")  # pas encore masqué
+    server.hub.publish(LiveState(True, "même texte"))
+    server.start(port)
+    shown(page, "même texte")  # reconnecté dans le délai
+    page.wait_for_timeout(500)
+    assert page.evaluate("window.__hidden") == []  # jamais masqué : aucun clignotement
+    page.close()
+
+
+def test_page_hides_only_after_the_grace_delay_when_the_application_stays_away(browser, server):
+    page = open_page(browser, server, "?grace=1.2")
+    server.publish(LiveState(True, "texte"))
+    shown(page, "texte")
+    server.stop()
+    page.wait_for_timeout(500)
+    assert not page.evaluate("document.getElementById('text').hidden")  # délai pas écoulé
+    hidden(page)  # écoulé : texte masqué
+    page.close()
+
+
+def test_zero_grace_hides_at_once(browser, server):
+    page = open_page(browser, server, "?grace=0")
+    server.publish(LiveState(True, "texte"))
+    shown(page, "texte")
+    server.stop()
+    page.wait_for_function("document.getElementById('text').hidden", timeout=1000)
+    page.close()
+
+
+def test_grace_comes_from_the_application_config_unless_the_url_overrides_it(browser, server):
+    server.stop()
+    server.port = server.start(browser_grace=0.3)  # config : 0,3 s
+    page = open_page(browser, server)
+    page.wait_for_timeout(300)  # réglage chargé
+    server.publish(LiveState(True, "texte"))
+    shown(page, "texte")
+    server.stop()
+    page.wait_for_function("document.getElementById('text').hidden", timeout=1500)
+    page.close()
+
+    server.port = server.start(browser_grace=0.3)
+    page = open_page(browser, server, "?grace=5")  # l'URL prime
+    server.publish(LiveState(True, "texte"))
+    shown(page, "texte")
+    server.stop()
+    page.wait_for_timeout(1500)
+    assert not page.evaluate("document.getElementById('text').hidden")
     page.close()
 
 

@@ -237,6 +237,7 @@ def test_saved_file_is_readable_json_with_all_fields(tmp_path):
         "web_port",
         "web_bind",
         "lost_grace_seconds",
+        "browser_grace_seconds",
         "obs_query",
         "serve",
         "log_level",
@@ -256,6 +257,15 @@ def test_old_default_device_name_is_replaced_but_a_custom_one_is_kept(monkeypatc
     monkeypatch.setattr("socket.gethostname", lambda: "mac-obs")
     assert clean({"device_name": "EasyWorship vers OBS"})[0].device_name == "ew2obs (mac-obs)"
     assert clean({"device_name": "Régie"})[0].device_name == "Régie"
+
+
+def test_browser_grace_defaults_to_2_s_and_invalid_values_are_ignored():
+    assert Config().browser_grace_seconds == 2.0
+    assert clean({"browser_grace_seconds": 0.5})[0].browser_grace_seconds == 0.5
+    assert clean({"browser_grace_seconds": 0})[0].browser_grace_seconds == 0.0
+    for bad in (-1, 61, "2", None, True):
+        config, warnings = clean({"browser_grace_seconds": bad})
+        assert config.browser_grace_seconds == 2.0 and len(warnings) == 1
 
 
 def test_web_listens_on_the_whole_local_network_by_default():

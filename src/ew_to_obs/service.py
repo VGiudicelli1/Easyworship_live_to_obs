@@ -119,7 +119,9 @@ class Service:
         if not config.ew_host:
             return
         self._hub = StateHub()
-        self._server = WebServer(self._hub, config.web_bind, config.web_port)
+        self._server = WebServer(
+            self._hub, config.web_bind, config.web_port, config.browser_grace_seconds
+        )
         try:
             await self._server.start()
             self._update(url=self._server.url)

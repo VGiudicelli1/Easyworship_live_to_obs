@@ -95,8 +95,15 @@ class StateHub:
 
 
 class WebServer:
-    def __init__(self, hub: StateHub, host: str = "127.0.0.1", port: int = 8000) -> None:
+    def __init__(
+        self,
+        hub: StateHub,
+        host: str = "127.0.0.1",
+        port: int = 8000,
+        browser_grace: float = 2.0,
+    ) -> None:
         self.hub = hub
+        self.browser_grace = browser_grace  # servi à la page : /settings.json
         self.host = host
         self._requested_port = port
         self.port = port
@@ -114,6 +121,7 @@ class WebServer:
         app = web.Application()
         for path, name in PAGES.items():
             app.router.add_get(path, self._page(name))
+        app.router.add_get("/settings.json", self._settings)
         app.router.add_get("/ws", self.hub.serve_browser)
         app.router.add_get("/favicon.ico", self._no_content)
         self._runner = web.AppRunner(app, shutdown_timeout=1.0)
@@ -137,6 +145,10 @@ class WebServer:
             return web.FileResponse(path, headers=NO_STORE)
 
         return handler
+
+    async def _settings(self, request: web.Request) -> web.Response:
+        """Réglages de la config utiles à la page (le paramètre d'URL ?grace= les remplace)."""
+        return web.json_response({"grace": self.browser_grace}, headers=NO_STORE)
 
     @staticmethod
     async def _no_content(request: web.Request) -> web.Response:

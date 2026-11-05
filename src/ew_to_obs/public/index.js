@@ -5,6 +5,8 @@ const box = document.getElementById("text");
 const params = new URLSearchParams(location.search);
 const MIN_FONT_PX = 8;
 let maxFontPx = (100 * 96) / 72; // 100 pt, plafond de la V2 (?max=PX pour le changer)
+let graceMs = 2000; // connexion perdue : le texte reste ce délai avant d'être masqué (config / ?grace=)
+let graceFromUrl = false;
 let referenceLines = 0; // ?lines=N : taille stable jusqu'à N lignes (voir fit)
 
 // --- réglages par l'URL (valeurs validées : jamais de contenu injecté tel quel dans le CSS) ---
@@ -35,6 +37,11 @@ function applyParams() {
   if (valign) css.setProperty("--valign", valign);
   const max = parseFloat(params.get("max"));
   if (Number.isFinite(max) && max > 0) maxFontPx = max;
+  const grace = parseFloat(params.get("grace"));
+  if (Number.isFinite(grace) && grace >= 0 && grace <= 60) {
+    graceMs = grace * 1000;
+    graceFromUrl = true;
+  }
   const lines = parseFloat(params.get("lines"));
   if (Number.isFinite(lines) && lines >= 1) referenceLines = lines;
 }
@@ -73,6 +80,39 @@ function render(state) {
   fit();
 }
 
+// Délai de grâce : si la connexion à l'application se coupe, le texte reste affiché ce délai (une
+// micro-coupure ne fait pas clignoter OBS) ; il est masqué si la connexion ne revient pas à temps.
+let hideTimer = null;
+function cancelHide() {
+  if (hideTimer !== null) {
+    clearTimeout(hideTimer);
+    hideTimer = null;
+  }
+}
+function scheduleHide() {
+  if (hideTimer !== null) return;
+  if (graceMs <= 0) {
+    render(null);
+    return;
+  }
+  hideTimer = setTimeout(() => {
+    hideTimer = null;
+    render(null);
+  }, graceMs);
+}
+
+// Réglage de la config de l'application ; en cas d'échec, la valeur par défaut (2 s) reste.
+function loadSettings() {
+  if (graceFromUrl) return;
+  fetch("/settings.json", { cache: "no-store" })
+    .then((response) => response.json())
+    .then((settings) => {
+      const grace = Number(settings.grace);
+      if (Number.isFinite(grace) && grace >= 0 && grace <= 60) graceMs = grace * 1000;
+    })
+    .catch(() => {});
+}
+
 // --- connexion à l'application, avec reconnexion automatique ---
 let retries = 0;
 function connect() {
@@ -83,19 +123,22 @@ function connect() {
   };
   socket.onmessage = (event) => {
     try {
-      render(JSON.parse(event.data));
+      const state = JSON.parse(event.data);
+      cancelHide(); // la connexion est revenue (ou n'a jamais été perdue) : l'état reçu fait foi
+      render(state);
     } catch (error) {
       console.warn("message illisible", error);
     }
   };
   socket.onclose = () => {
-    render(null); // application arrêtée ou injoignable : ne pas laisser un texte périmé
+    scheduleHide(); // application arrêtée ou injoignable : pas de texte périmé au-delà du délai
     setTimeout(connect, Math.min(500 * 2 ** retries++, 5000));
   };
   socket.onerror = () => socket.close();
 }
 
 applyParams();
+loadSettings();
 window.addEventListener("resize", fit);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
 

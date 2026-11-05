@@ -34,6 +34,7 @@ Le fond de la page est **transparent** ; le texte est blanc dans un cadre gris t
 
 | Paramètre | Effet | Défaut |
 |---|---|---|
+| `grace` | secondes (0 à 60) avant de masquer le texte si la page perd l'application ; `0` = tout de suite | 2 (réglable dans la config : `--browser-grace`) |
 | `lines` | **taille stable** : la police ne dépasse pas celle qui fait tenir N lignes (un texte de 2 à 4 lignes garde la même taille ; au-delà, elle diminue) | taille ajustée à chaque diapo |
 | `bg` | couleur de fond du cadre (`transparent` pour aucun ; `#` s'écrit `%23` ou s'omet : `bg=003366`) | `rgba(127,127,127,.7)` |
 | `color` | couleur du texte | blanc |
@@ -63,7 +64,8 @@ Très long texte : la police diminue jusqu'à 8 px, puis le texte est coupé mai
 | Diapo avec image/vidéo seule, diapo vide | rien (pas de cadre) |
 | Logo, écran noir, écran effacé (*clear*) | rien |
 | Rien en direct | rien |
-| Connexion à EW perdue **plus de 2 s** | rien (en dessous de 2 s : le texte reste, pas de clignotement) |
+| Connexion de l'application à EW perdue **plus de 2 s** | rien (en dessous de 2 s : le texte reste, pas de clignotement) |
+| Connexion d'OBS (la page) à l'application perdue **plus de 2 s** | rien ; en dessous de 2 s le texte reste, et la page se reconnecte toute seule dès que possible |
 
 L'image, la vidéo et le compte à rebours ne sont jamais transmis : seul le texte l'est.
 

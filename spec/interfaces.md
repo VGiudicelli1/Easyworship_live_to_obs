@@ -46,6 +46,7 @@ URL à saisir dans OBS : `http://<nom-de-la-machine-de-l'application>:<port>/` (
 | `valign` | `top`, `middle`, `bottom` (ex. bandeau en bas : `?valign=bottom`) | `middle` |
 | `font` | famille de police (lettres, chiffres, espaces, virgules, guillemets) | police système + emojis |
 | `max` | taille de police maximale (px) | 133,33 px = 100 pt (= V2) |
+| `grace` | délai (s, 0 à 60) avant de masquer le texte si la page perd l'application ; remplace `browser_grace_seconds` de la config | config (2) |
 | `lines` | taille **stable** : la police ne dépasse pas celle qui fait tenir N lignes (ex. `lines=4` : un texte de 2 ou 4 lignes garde la même taille, au-delà elle diminue) | désactivé (taille ajustée à chaque diapo) |
 | `demo` | `?demo=1` ou `?demo=Mon%20texte` : aperçu du style sans application (aucun WebSocket) | — |
 
@@ -59,7 +60,7 @@ Le texte est affiché en **texte brut** (`textContent`, jamais de HTML), à la p
 ```
 
 * À chaque **nouvelle connexion**, le serveur envoie immédiatement l'état courant.
-* Le navigateur vide l'affichage s'il perd la connexion et se reconnecte automatiquement (délai croissant plafonné).
+* **Délai de grâce côté navigateur** : si le WebSocket se ferme (événement `close`), la page garde le texte affiché pendant `browser_grace_seconds` (config, **2 s** par défaut, `?grace=` dans l'URL la remplace, `0` = masquage immédiat) puis le masque ; si la connexion revient avant (l'application renvoie l'état à chaque connexion), le texte n'a jamais disparu : pas de clignotement. La page lit ce réglage dans `GET /settings.json` (2 s si la lecture échoue). Elle se reconnecte automatiquement, délai croissant plafonné (0,5 s doublé jusqu'à 5 s). Aucun message régulier n'est nécessaire : un WebSocket rompu déclenche `close` tout de suite.
 * `text` vide (diapo vide, ou `visible = false`) : la page masque la zone de texte. `visible = false` est aussi envoyé quand **rien n'est en direct** dans EW et quand la connexion à EW est **perdue depuis plus de 2 s** (délai de grâce : les micro-coupures ne font pas clignoter le texte).
 * Le texte est du **texte brut** (emojis compris, retours à la ligne `\n`) : la page l'affiche tel quel, sans interpréter de HTML (`textContent`, jamais `innerHTML`).
 * Aucun message navigateur → serveur.
@@ -111,6 +112,7 @@ Dossier de configuration de l'OS (`~/Library/Application Support/ew_to_obs/` sur
   "web_port": 8000,
   "web_bind": "0.0.0.0",
   "lost_grace_seconds": 2.0,
+  "browser_grace_seconds": 2.0,
   "obs_query": "lines=4"
 }
 ```
@@ -123,7 +125,7 @@ Dossier de configuration de l'OS (`~/Library/Application Support/ew_to_obs/` sur
 | `device_name` | nom montré à l'opérateur dans EW | `--device-name` |
 | `obs_query` | réglages de la page ajoutés à l'adresse donnée à OBS (défaut `lines=4`) | fenêtre (« Réglages de la page ») |
 | `web_port` | port de la page | fenêtre (« Port de la page ») ; `--web-port` pour un seul lancement |
-| `web_bind`, `lost_grace_seconds` | valeurs durables, **modifiables à la main** | `--web-bind`, `--grace` ne valent que pour le lancement |
+| `web_bind`, `lost_grace_seconds`, `browser_grace_seconds` | valeurs durables, **modifiables à la main** | `--web-bind`, `--grace`, `--browser-grace` ne valent que pour le lancement (ou enregistrés par `--saveconf`) |
 
 * Fichier absent : valeurs par défaut, identité générée et **écrite dès le premier lancement** (sinon l'appairage serait perdu).
 * Chaque champ invalide reprend sa valeur par défaut (avertissement dans le journal) ; un fichier illisible est renommé `config.json.bak` et l'application démarre avec les valeurs par défaut — **la télécommande est alors à ré-accepter dans EW**.
@@ -137,7 +139,7 @@ python -m ew_to_obs --headless --host NOM --serve   # sans fenêtre, 1er lanceme
 python -m ew_to_obs --headless --serve              # sans fenêtre, ensuite : rien à saisir
 ```
 
-Options : `--host`, `--client-id`, `--device-name` (mémorisés) ; `--port` (diagnostic), `--grace`, `--web-port`, `--web-bind` (ce lancement seulement) ; `--headless` (sans fenêtre) ; `--saveconf` (enregistre `--host`, `--serve`, `--loglevel`, `--web-port`, `--web-bind`, `--grace` comme valeurs par défaut, puis quitte sans démarrer) ; `--ci` (mode service : `--headless --serve`, état de connexion dans le journal sur stderr) ; `--loglevel 0..3` (stderr : erreurs, avertissements, infos, détails ; 2 par défaut avec `--ci`) ; `--serve` (page pour OBS, mode sans fenêtre : la fenêtre la sert toujours) ; `--config-dir`, `--show-config` (lecture seule), `-v`. Sans `--serve`, une ligne JSON `{"visible":…, "text":…}` par changement d'état sur la sortie standard. Codes de sortie : 0 normal, 2 pas de PC EW connu (mode sans fenêtre) ou port web occupé, 3 fenêtre impossible (tkinter ou écran absent).
+Options : `--host`, `--client-id`, `--device-name` (mémorisés) ; `--port` (diagnostic), `--grace` (application ↔ EW), `--browser-grace` (navigateur ↔ application), `--web-port`, `--web-bind` (ce lancement seulement) ; `--headless` (sans fenêtre) ; `--saveconf` (enregistre `--host`, `--serve`, `--loglevel`, `--web-port`, `--web-bind`, `--grace`, `--browser-grace` comme valeurs par défaut, puis quitte sans démarrer) ; `--ci` (mode service : `--headless --serve`, état de connexion dans le journal sur stderr) ; `--loglevel 0..3` (stderr : erreurs, avertissements, infos, détails ; 2 par défaut avec `--ci`) ; `--serve` (page pour OBS, mode sans fenêtre : la fenêtre la sert toujours) ; `--config-dir`, `--show-config` (lecture seule), `-v`. Sans `--serve`, une ligne JSON `{"visible":…, "text":…}` par changement d'état sur la sortie standard. Codes de sortie : 0 normal, 2 pas de PC EW connu (mode sans fenêtre) ou port web occupé, 3 fenêtre impossible (tkinter ou écran absent).
 
 ## 5b. Journal
 

@@ -255,6 +255,16 @@ def test_saveconf_records_service_options_and_does_not_start(tmp_path, capsys):
     assert '"ew_host": "pc.local"' in capsys.readouterr().out
 
 
+def test_browser_grace_is_saved_with_saveconf_and_used_by_the_service(tmp_path):
+    store = store_for(tmp_path)
+    resolve(parse("--host", "pc", "--browser-grace", "0.5", "--saveconf"), store)
+    assert store_for(tmp_path).config.browser_grace_seconds == 0.5
+    assert resolve(parse("--headless"), store_for(tmp_path)).browser_grace == 0.5
+    assert (
+        resolve(parse("--headless", "--browser-grace", "4"), store_for(tmp_path)).browser_grace == 4
+    )
+
+
 def test_saved_options_are_the_defaults_of_a_plain_headless_run(tmp_path):
     store = store_for(tmp_path)
     resolve(parse("--host", "pc", "--serve", "--web-port", "8123", "--saveconf"), store)

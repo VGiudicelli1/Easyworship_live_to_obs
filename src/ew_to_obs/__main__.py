@@ -35,6 +35,7 @@ class Settings:
     client_id: str
     device_name: str
     grace: float
+    browser_grace: float
     serve: bool
     web_bind: str
     web_port: int
@@ -54,6 +55,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--grace", type=float, help="délai de grâce (s) avant de masquer (config : 2)"
+    )
+    parser.add_argument(
+        "--browser-grace",
+        type=float,
+        help="délai de grâce (s) avant que la page masque le texte si elle perd l'application "
+        "(config : 2)",
     )
     parser.add_argument("--serve", action="store_true", help="servir la page web pour OBS")
     parser.add_argument("--web-port", type=int, help="port du serveur web (config : 8000)")
@@ -114,6 +121,8 @@ def save_options(args: argparse.Namespace, store: ConfigStore) -> None:
         changes["web_bind"] = args.web_bind
     if args.grace is not None:
         changes["lost_grace_seconds"] = args.grace
+    if args.browser_grace is not None:
+        changes["browser_grace_seconds"] = args.browser_grace
     if args.serve or args.ci:
         changes["serve"] = True
     if args.loglevel is not None:
@@ -138,6 +147,9 @@ def resolve(args: argparse.Namespace, store: ConfigStore) -> Settings | None:
         client_id=config.client_id,
         device_name=config.device_name,
         grace=args.grace if args.grace is not None else config.lost_grace_seconds,
+        browser_grace=(
+            args.browser_grace if args.browser_grace is not None else config.browser_grace_seconds
+        ),
         serve=args.serve or args.ci or config.serve,
         web_bind=args.web_bind or config.web_bind,
         web_port=args.web_port if args.web_port is not None else config.web_port,
@@ -162,7 +174,11 @@ def _log_status(status: ConnectionStatus, detail: str) -> None:
 
 async def run(settings: Settings, store: ConfigStore) -> int:
     hub = StateHub()
-    server = WebServer(hub, settings.web_bind, settings.web_port) if settings.serve else None
+    server = (
+        WebServer(hub, settings.web_bind, settings.web_port, settings.browser_grace)
+        if settings.serve
+        else None
+    )
 
     def on_state(state: LiveState) -> None:
         hub.publish(state)

@@ -65,7 +65,8 @@ class Config:
     device_name: str = field(default_factory=default_device_name)  # nom montré dans EW
     web_port: int = 8000
     web_bind: str = "0.0.0.0"  # tout le réseau local (OBS peut être sur une autre machine)
-    lost_grace_seconds: float = 2.0
+    lost_grace_seconds: float = 2.0  # connexion application ↔ EW perdue : délai avant de masquer
+    browser_grace_seconds: float = 2.0  # connexion navigateur ↔ application perdue : idem
     obs_query: str = "lines=4"  # réglages de la page ajoutés à l'adresse donnée à OBS
     serve: bool = False  # mode sans fenêtre : servir la page sans avoir à passer --serve
     log_level: int = 1  # journal sur stderr en mode sans fenêtre : 0 erreurs … 3 détails
@@ -162,6 +163,12 @@ def clean(raw: dict) -> tuple[Config, list[str]]:
             config.lost_grace_seconds = grace
         else:
             reject("lost_grace_seconds", raw["lost_grace_seconds"])
+    if "browser_grace_seconds" in raw:
+        grace = _number(raw["browser_grace_seconds"], 0, 60)
+        if grace is not None:
+            config.browser_grace_seconds = grace
+        else:
+            reject("browser_grace_seconds", raw["browser_grace_seconds"])
     if "obs_query" in raw:
         value = raw["obs_query"]
         if valid_query(value):

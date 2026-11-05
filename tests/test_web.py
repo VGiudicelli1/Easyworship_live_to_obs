@@ -219,6 +219,23 @@ def test_port_zero_reports_the_real_port():
     run(scenario())
 
 
+def test_settings_json_gives_the_browser_grace(monkeypatch):
+    async def scenario():
+        hub = StateHub()
+        server = WebServer(hub, "127.0.0.1", 0, browser_grace=1.5)
+        await server.start()
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(server.url + "settings.json") as response:
+                    assert response.status == 200
+                    assert response.headers["Cache-Control"] == "no-store"
+                    return await response.json()
+        finally:
+            await server.stop()
+
+    assert asyncio.run(scenario()) == {"grace": 1.5}
+
+
 def test_url_uses_the_machine_name_when_listening_on_the_whole_network(monkeypatch):
     monkeypatch.setattr("socket.gethostname", lambda: "mac-obs.local")
     hub = StateHub()

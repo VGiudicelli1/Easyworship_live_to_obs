@@ -307,6 +307,12 @@ Le délai se règle : `lost_grace_seconds` dans `config.json` ou `--grace`.
 - **Relever** : délai entre le retour du réseau et le texte affiché : ______ s ; la valeur de 2 s convient-elle ?
 - ☐ OK ☐ KO — notes :
 
+### R-40b · Coupure entre OBS et l'application (P2)
+- **Faire** : l'application sur le PC d'EW, OBS sur le Mac. Texte affiché ; (a) couper le Wi‑Fi du Mac ~1 s ; (b) le couper ~10 s ; (c) arrêter puis relancer l'application (`schtasks /End` puis `/Run`).
+- **Attendu** : (a) **aucun clignotement** ; (b) texte masqué après 2 s, **retour automatique** quelques secondes après le réseau (reconnexion 0,5 s doublé jusqu'à 5 s) ; (c) texte masqué après 2 s puis de retour sans toucher à OBS. Réglage : `browser_grace_seconds`, `--browser-grace`, ou `?grace=` dans l'URL.
+- **Relever** : le délai de 2 s convient-il ? Une coupure silencieuse (câble débranché) est-elle détectée par le navigateur, et au bout de combien de temps ?
+- ☐ OK ☐ KO — notes :
+
 ### R-41 · Fermeture puis réouverture d'EW (P1)
 - **Faire** : quitter EW normalement, attendre 20 s, le rouvrir et remettre une diapo en direct.
 - **Attendu** : texte masqué après 2 s ; reconnexion et affichage **sans toucher à l'application**.

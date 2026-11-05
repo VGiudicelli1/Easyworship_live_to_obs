@@ -46,7 +46,7 @@ python -m ew_to_obs --headless --host NOM                # sans page : une ligne
 python -m ew_to_obs --show-config                        # affiche la configuration (lecture seule)
 ```
 
-Options : `--host`, `--serve`, `--loglevel 0..3`, `--web-port`, `--web-bind`, `--grace`, `--saveconf` (les enregistre comme valeurs par défaut puis quitte), `--config-dir`, `-v`. Voir [spec/interfaces.md](spec/interfaces.md). La configuration et le journal sont dans le dossier utilisateur de l'OS (`%APPDATA%\ew_to_obs`, `~/Library/Application Support/ew_to_obs`, `~/.config/ew_to_obs`).
+Options : `--host`, `--serve`, `--loglevel 0..3`, `--web-port`, `--web-bind`, `--grace`, `--browser-grace`, `--saveconf` (les enregistre comme valeurs par défaut puis quitte), `--config-dir`, `-v`. Voir [spec/interfaces.md](spec/interfaces.md). La configuration et le journal sont dans le dossier utilisateur de l'OS (`%APPDATA%\ew_to_obs`, `~/Library/Application Support/ew_to_obs`, `~/.config/ew_to_obs`).
 
 ## Développement
 
@@ -65,7 +65,7 @@ Tests de la page dans un navigateur : `pip install -e ".[dev,browser]" && playwr
 | `live.py` | logique pure : messages d'EW → état `(visible, texte)` |
 | `discovery.py` | résolution IPv4, port par mDNS (parallèle), connexion TCP |
 | `config.py`, `logs.py` | configuration JSON dans le dossier de l'OS (identité, PC EW, dernière IP), journal tournant sans texte de diapo |
-| `client.py` | boucle asynchrone : appairage, reconnexion, délai de grâce de 2 s, heartbeats, keepalive |
+| `client.py` | boucle asynchrone : appairage, reconnexion, délai de grâce de 2 s (aussi côté page), heartbeats, keepalive |
 | `web.py` + `public/` | serveur `aiohttp` (page + WebSocket) ; page sans CDN, texte brut, taille de police ajustée à la zone |
 | `service.py`, `ui.py`, `status_text.py` | la fenêtre Tkinter : le service tourne dans un thread, la fenêtre lit un instantané toutes les 250 ms |
 
